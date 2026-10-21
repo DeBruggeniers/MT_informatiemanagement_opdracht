@@ -32,12 +32,25 @@ function notifyUpdate(){
  }
  n.innerHTML='Er is nieuwe informatie beschikbaar. Sla eerst je invoer op om het scherm bij te werken. <button type="button" data-action="apply-update" class="secondary">Nu bijwerken</button>';
 }
+function visibleStateSignature(x){
+ if(!x)return '';
+ if(role==='admin')return JSON.stringify(x);
+ // Ignore changes which do not affect visible participant content.
+ return JSON.stringify({
+   round:x.round,revealed:x.revealed,team:x.team,
+   documents:(x.documents||[]).map(d=>[d.id,d.round,d.title,d.type]),
+   questions:(x.questions||[]).map(q=>[q.id,q.question,q.answer]),
+   decisions:(x.decisions||[]).map(d=>[d.round,d.observations,d.decision,d.reason,d.confidence])
+ });
+}
 async function refresh(initial=false){
  try{
    const next=await request(role==='admin'?'/api/admin/state':'/api/team/state');
-   const changed=initial||JSON.stringify(next)!==JSON.stringify(state);
-   if(!changed)return; // Poll silently; never rebuild an unchanged screen.
+   const oldSig=visibleStateSignature(state);
+   const newSig=visibleStateSignature(next);
+   const changed=initial || oldSig!==newSig;
    state=next;
+   if(!changed)return; // Sync occurs without rebuilding the page.
    if(role==='team'&&formDirty&&!initial){
      pendingUpdate=true;
      notifyUpdate();
