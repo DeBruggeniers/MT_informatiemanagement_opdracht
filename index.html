@@ -190,12 +190,27 @@ if(a==='dashboard'){const host=el('dashboard-host');if(host)host.scrollIntoView(
  if(button){button.disabled=true;button.textContent='Opslaan…'}
  status.className='muted';status.textContent='Besluit wordt opgeslagen…';
  try{
-  await request('/api/team/decision',data);
-  const verified=await request('/api/team/state');
-  const saved=(verified.decisions||[]).find(d=>Number(d.round)===round);
-  if(!saved||saved.observations!==data.observations||saved.decision!==data.decision||saved.reason!==data.reason||Number(saved.confidence)!==data.confidence)throw Error('Opslag niet bevestigd');
-  state=verified;formDirty=false;pendingUpdate=false;
-  status.className='okay';status.textContent='✓ Besluit opgeslagen. Het is nu beschikbaar in het docentoverzicht.';
+  const result=await request('/api/team/decision',data);
+  if(result.success!==true)throw Error('De server heeft het opslaan niet bevestigd.');
+  // The Worker trims text on save. A later GET may also briefly return
+  // stale information; never present a confirmed POST as a failed save.
+  formDirty=false;pendingUpdate=false;
+  status.className='okay';status.textContent='✓ Besluit succesvol opgeslagen. Het is verzonden naar de docent.';
+  try{
+    const verified=await request('/api/team/state');
+    const saved=(verified.decisions||[]).find(d=>Number(d.round)===round);
+    const same=saved&&
+      String(saved.observations||'').trim()===data.observations.trim().slice(0,2500)&&
+      String(saved.decision||'').trim()===data.decision.trim().slice(0,2500)&&
+      String(saved.reason||'').trim()===data.reason.trim().slice(0,2500)&&
+      Number(saved.confidence)===data.confidence;
+    if(same){
+      state=verified;
+      status.textContent='✓ Besluit opgeslagen en gecontroleerd. Zichtbaar in de docentbediening.';
+    }
+  }catch(verificationError){
+    console.warn('Opslag bevestigd, terugleescontrole tijdelijk niet beschikbaar:',verificationError);
+  }
   if(button)button.textContent='Besluit opnieuw opslaan';
  }catch(err){status.className='bad';status.textContent='Opslaan mislukt: '+err.message;throw err}
  finally{if(button)button.disabled=false}
