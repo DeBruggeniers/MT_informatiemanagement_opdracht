@@ -70,7 +70,7 @@ async function refresh(initial=false){
    if(roundChanged)selectedDoc=null;
    render();
  }catch(e){
-   if(role==='admin'&&initial&&/sessie nog starten/i.test(e.message)){
+   if(role==='admin'&&/sessie nog starten/i.test(e.message)){
      state={uninitialized:true};render();return;
    }
    if(initial)throw e;
@@ -189,7 +189,21 @@ async function action(a){try{if(a==='apply-update'){if(role==='team'&&formDirty&
    throw error;
  }
  return
-}if(a==='reveal'){await request('/api/admin/reveal',{});return refresh()}if(a==='reset'){if(confirm('Alle antwoorden en besluiten verwijderen en nieuwe sessie maken?')&&confirm('Definitief resetten?')){await request('/api/admin/reset',{});return refresh()}return}if(a==='refresh')return refresh();if(a==='export'){const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='mt-resultaten.json';link.click();URL.revokeObjectURL(link.href)}}catch(e){alert(e.message)}}
+}if(a==='reveal'){await request('/api/admin/reveal',{});return refresh()}if(a==='reset'){
+ if(!confirm('Deze reset verwijdert alle teamcodes, informatievragen, antwoorden en besluiten. Doorgaan?'))return;
+ if(!confirm('Weet je zeker dat je de sessie definitief wilt resetten?'))return;
+ await request('/api/admin/reset',{});
+ // After reset the API correctly returns 404 for /api/admin/state.
+ // Show the new-session view instead of swallowing that 404 in refresh().
+ for(const id of Object.keys(draftAnswers))delete draftAnswers[id];
+ lastSentAnswerId=null;
+ formDirty=false;
+ pendingUpdate=false;
+ selectedDoc=null;
+ state={uninitialized:true};
+ render();
+ return;
+}if(a==='refresh')return refresh();if(a==='export'){const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='mt-resultaten.json';link.click();URL.revokeObjectURL(link.href)}}catch(e){alert(e.message)}}
 // Preserve drafts. Silent polling never rebuilds a dirty participant form.
 document.addEventListener('input',event=>{
  if(el('screen').contains(event.target)&&
