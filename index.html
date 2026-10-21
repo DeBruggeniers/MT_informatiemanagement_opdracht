@@ -172,7 +172,7 @@ async function loadDoc(id){selectedDoc=id;const box=el('viewer');if(!box)return;
 async function action(a){try{if(a==='apply-update'){if(role==='team'&&formDirty&&!confirm('Niet-opgeslagen invoer gaat verloren. Toch bijwerken?'))return;if(role==='team')formDirty=false;pendingUpdate=false;render();return}if(a==='expand-all'||a==='collapse-all'){
  document.querySelectorAll('.decision-fold').forEach(item=>item.open=(a==='expand-all'));
  return;
-}if(a==='export-excel'){await exportMTExcel(state);return}
+}if(a==='export-excel'){const latest=await request('/api/admin/state');await window.exportMTExcel(latest);return}
 if(a==='dashboard'){const host=el('dashboard-host');if(host)host.scrollIntoView({behavior:'smooth',block:'start'});return}if(a.startsWith('doc:'))return loadDoc(a.slice(4));if(a==='ask'){await request('/api/team/ask',{question:el('question').value});formDirty=false;pendingUpdate=false;return refresh()}if(a==='save'){await request('/api/team/decision',{observations:el('observations').value,decision:el('decision').value,reason:el('reason').value,confidence:+el('confidence').value});formDirty=false;pendingUpdate=false;return refresh()}if(a==='init'){await request('/api/admin/init',{});return refresh()}if(a.startsWith('round:')){const n=+a.split(':')[1];if(confirm('Alle MT’s naar '+phases[n]+'?')){await request('/api/admin/advance',{round:n});return refresh()}return}if(a.startsWith('answer:')){
  const id=+a.split(':')[1];
  const field=el('answer-'+id);
