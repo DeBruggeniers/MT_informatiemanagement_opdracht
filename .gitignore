@@ -1,0 +1,17 @@
+# Geen oefengeheimen of docentbronnen publiceren
+source/
+private/
+secrets/
+.env
+.env.*
+.dev.vars
+.dev.vars.*
+node_modules/
+.DS_Store
+*.zip
+*.docx
+*.pdf
+app/content.js
+app/worker.js
+app/schema.sql
+app/wrangler.toml
