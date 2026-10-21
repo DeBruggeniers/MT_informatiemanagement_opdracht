@@ -6,19 +6,19 @@
 </style></head><body>
 <header><strong>MT aan het stuur</strong><div><small>Digitale oefening informatiemanagement · fictieve casus</small></div></header>
 <main><section class="card" id="login"><h1>Welkom</h1><p>Vul je vaste MT-code in (MT1, MT2, MT3 of MT4). Opleiders kunnen aanmelden met het docentgeheim.</p>
-<label for="api">Cloudflare Worker-adres</label><input id="api" type="url" placeholder="https://voorbeeld.workers.dev" autocomplete="url">
+
 <div class="grid"><div><label for="teamcode">Teamcode</label><input id="teamcode" autocomplete="off"><button id="join">Open MT-scherm</button></div><div><label for="secret">Docentgeheim</label><input id="secret" type="password"><button id="admin" class="secondary">Open docentbediening</button></div></div>
 <p id="message" class="bad" role="alert"></p></section><section id="screen" class="hidden"></section></main>
 <script>
 'use strict';
 const el=x=>document.getElementById(x),safe=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const phases=['Wachten op start','Ronde 1 – Signaleren','Ronde 2 – Verklaren','Ronde 3 – Besluiten','Eindresultaat'];
-let role='',credential='',state=null,selectedDoc=null,poll=null;el('api').value=localStorage.getItem('mt-api')||'';
-const root=()=>el('api').value.trim().replace(/\/$/,'');
+let role='',credential='',state=null,selectedDoc=null,poll=null;
+const root=()=> 'https://mt-informatiemanagement.koen-f98.workers.dev';
 async function request(path,payload){const headers={'Content-Type':'application/json'};if(role==='admin')headers.Authorization='Bearer '+credential;else headers['x-team-code']=credential;const response=await fetch(root()+path,{method:payload===undefined?'GET':'POST',headers,body:payload===undefined?undefined:JSON.stringify(payload),cache:'no-store'});const data=await response.json();if(!response.ok)throw Error(data.error||'Verbindingsfout');return data}
 const steps=n=>'<div class="steps">'+phases.map((p,i)=>'<span class="'+(n===i?'current':n>i?'past':'')+'">'+safe(p)+'</span>').join('')+'</div>';
 const btn=(text,action,cls='')=>'<button class="'+cls+'" data-action="'+action+'">'+safe(text)+'</button>';
-async function login(as){try{if(!root())throw Error('Vul eerst het Cloudflare Worker-adres in.');role=as;credential=el(as==='admin'?'secret':'teamcode').value.trim();if(!credential)throw Error('Vul je toegangscode in.');localStorage.setItem('mt-api',root());await refresh(true);el('login').classList.add('hidden');el('screen').classList.remove('hidden');if(poll)clearInterval(poll);poll=setInterval(()=>refresh(false).catch(()=>{}),8000)}catch(e){el('message').textContent=e.message}}
+async function login(as){try{role=as;credential=el(as==='admin'?'secret':'teamcode').value.trim();if(!credential)throw Error('Vul je toegangscode in.');await refresh(true);el('login').classList.add('hidden');el('screen').classList.remove('hidden');if(poll)clearInterval(poll);poll=setInterval(()=>refresh(false).catch(()=>{}),8000)}catch(e){el('message').textContent=e.message}}
 let formDirty=false;
 let pendingUpdate=false;
 function notifyUpdate(){
