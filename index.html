@@ -18,30 +18,52 @@ const root=()=>el('api').value.trim().replace(/\/$/,'');
 async function request(path,payload){const headers={'Content-Type':'application/json'};if(role==='admin')headers.Authorization='Bearer '+credential;else headers['x-team-code']=credential;const response=await fetch(root()+path,{method:payload===undefined?'GET':'POST',headers,body:payload===undefined?undefined:JSON.stringify(payload),cache:'no-store'});const data=await response.json();if(!response.ok)throw Error(data.error||'Verbindingsfout');return data}
 const steps=n=>'<div class="steps">'+phases.map((p,i)=>'<span class="'+(n===i?'current':n>i?'past':'')+'">'+safe(p)+'</span>').join('')+'</div>';
 const btn=(text,action,cls='')=>'<button class="'+cls+'" data-action="'+action+'">'+safe(text)+'</button>';
-async function login(as){try{if(!root())throw Error('Vul eerst het Cloudflare Worker-adres in.');role=as;credential=el(as==='admin'?'secret':'teamcode').value.trim();if(!credential)throw Error('Vul je toegangscode in.');localStorage.setItem('mt-api',root());await refresh(true);el('login').classList.add('hidden');el('screen').classList.remove('hidden');if(poll)clearInterval(poll);poll=setInterval(()=>refresh(false).catch(()=>{}),4000)}catch(e){el('message').textContent=e.message}}
-async function refresh(initial=false){try{
- const previousRound=state?.round;
- const next=await request(role==='admin'?'/api/admin/state':'/api/team/state');
- state=next;
- // Do not replace active form elements while a participant is typing.
- // Server updates continue polling and render as soon as the editor loses focus.
- const focused=document.activeElement;
- const editing=role==='team' && focused &&
-   el('screen').contains(focused) &&
-   ['TEXTAREA','INPUT','SELECT'].includes(focused.tagName);
- if(editing && previousRound===next.round && !initial)return;
- render()
-}catch(e){if(role==='admin'&&initial&&/sessie nog starten/i.test(e.message)){state={uninitialized:true};render();return}if(initial)throw e;el('screen').dataset.connection='offline'}}
+async function login(as){try{if(!root())throw Error('Vul eerst het Cloudflare Worker-adres in.');role=as;credential=el(as==='admin'?'secret':'teamcode').value.trim();if(!credential)throw Error('Vul je toegangscode in.');localStorage.setItem('mt-api',root());await refresh(true);el('login').classList.add('hidden');el('screen').classList.remove('hidden');if(poll)clearInterval(poll);poll=setInterval(()=>refresh(false).catch(()=>{}),8000)}catch(e){el('message').textContent=e.message}}
+let formDirty=false;
+let pendingUpdate=false;
+function notifyUpdate(){
+ let n=el('mt-update-notice');
+ if(!n){
+   n=document.createElement('div');
+   n.id='mt-update-notice';
+   n.className='note';
+   n.style.cssText='position:sticky;top:0;z-index:20;margin:0 0 10px';
+   el('screen').prepend(n);
+ }
+ n.innerHTML='Er is nieuwe informatie beschikbaar. Sla eerst je invoer op om het scherm bij te werken. <button type="button" data-action="apply-update" class="secondary">Nu bijwerken</button>';
+}
+async function refresh(initial=false){
+ try{
+   const next=await request(role==='admin'?'/api/admin/state':'/api/team/state');
+   const changed=initial||JSON.stringify(next)!==JSON.stringify(state);
+   if(!changed)return; // Poll silently; never rebuild an unchanged screen.
+   state=next;
+   if(role==='team'&&formDirty&&!initial){
+     pendingUpdate=true;
+     notifyUpdate();
+     return;
+   }
+   pendingUpdate=false;
+   render();
+ }catch(e){
+   if(role==='admin'&&initial&&/sessie nog starten/i.test(e.message)){
+     state={uninitialized:true};render();return;
+   }
+   if(initial)throw e;
+   el('screen').dataset.connection='offline';
+ }
+}
 function render(){const host=el('screen');if(role==='admin')return renderAdmin(host);renderTeam(host)}
 function renderTeam(host){const s=state,r=s.round,docs=s.documents||[];let h='<section class="card"><h1>Managementteam '+safe(({A:1,B:2,C:3,D:4})[s.team]||s.team)+'</h1>'+steps(r)+'<p>Jullie besturen een fictieve provinciale beheerorganisatie. Formuleer onderbouwde managementbesluiten op basis van de beschikbare informatie.</p>';if(r===0)h+='<div class="note">De eerste informatieronde wordt door de opleider gestart.</div>';if(r>0)h+='<h2>Gezamenlijke doelstellingen</h2><ul>'+(s.samp||[]).map(x=>'<li>'+safe(x)+'</li>').join('')+'</ul>';if(s.revealed)h+='<div class="note"><strong>Onthulling:</strong> alle managementteams bestuurden dezelfde fictieve organisatie en kregen verschillende informatie.</div>';h+='</section>';if(r>0){h+='<div class="split"><section class="card"><h2>Beschikbare informatie</h2><p class="muted">Vrijgegeven informatie uit eerdere rondes blijft beschikbaar.</p>'+docs.map(d=>'<div class="doc"><b>'+safe(d.title)+'</b><p class="muted">'+(d.type==='html'?'Dashboard':'Rapport, notitie of e-mail')+'</p>'+btn('Open document','doc:'+d.id,'secondary')+'</div>').join('')+'</section><section class="card"><h2>Document</h2><div id="viewer">Selecteer links een document.</div></section></div>';h+='<div class="grid"><section class="card"><h2>Informatievragen</h2><p class="muted">Maximaal twee vragen in de eerste twee rondes.</p>'+(s.questions||[]).map(q=>'<div class="doc"><b>Vraag</b><p>'+safe(q.question)+'</p><b>Antwoord</b><p>'+safe(q.answer||'Nog niet beantwoord')+'</p></div>').join('');if(r<=2&&(s.questions||[]).length<2)h+='<label>Welke aanvullende informatie hebben jullie nodig?</label><textarea id="question"></textarea>'+btn('Vraag indienen','ask');h+='</section><section class="card"><h2>Besluitregistratie</h2>';if(r<=3){const old=(s.decisions||[]).find(d=>d.round===r)||{};h+='<label>Waarnemingen en aannames</label><textarea id="observations">'+safe(old.observations||'')+'</textarea><label>Besluit(en)</label><textarea id="decision">'+safe(old.decision||'')+'</textarea><label>Onderbouwing en onzekerheden</label><textarea id="reason">'+safe(old.reason||'')+'</textarea><label>Zekerheid (1–5)</label><select id="confidence">'+[1,2,3,4,5].map(n=>'<option value="'+n+'" '+((old.confidence||3)===n?'selected':'')+'>'+n+'</option>').join('')+'</select>'+btn('Besluit opslaan','save')}else h+='<p>De besluitvorming is gesloten.</p>';h+='<h2>Eerdere besluiten</h2>'+(s.decisions||[]).map(d=>'<div class="doc"><b>Ronde '+safe(d.round)+'</b><p>'+safe(d.decision)+'</p></div>').join('')+'</section></div>'}host.innerHTML=h;if(selectedDoc&&docs.some(d=>d.id===selectedDoc))loadDoc(selectedDoc)}
 function renderAdmin(host){if(state.uninitialized){host.innerHTML='<section class="card"><h1>Docentbediening</h1><p>Er is nog geen sessie. Start een nieuwe oefening en deel daarna de teamcodes uit.</p>'+btn('Nieuwe sessie starten','init')+'</section>';return}const s=state;let h='<section class="card"><h1>Docentbediening</h1>'+steps(s.round)+'<h2>'+safe(phases[s.round])+'</h2>'+[1,2,3,4].map(n=>'<button '+(n<=s.round?'disabled':'')+' data-action="round:'+n+'">'+(n===4?'Naar eindresultaat':'Start ronde '+n)+'</button>').join('')+btn('Vernieuwen','refresh','secondary')+btn('Reset sessie','reset','danger')+'</section><section class="card"><h2>Teamcodes</h2><div class="grid">'+(s.codes||[]).map(c=>'<div class="doc"><strong>MT '+safe(({A:1,B:2,C:3,D:4})[c.team]||c.team)+'</strong><p><code>'+safe(c.code)+'</code></p></div>').join('')+'</div></section>';h+='<section class="card"><h2>Informatievragen</h2>'+(s.questions||[]).map(q=>'<div class="doc"><strong>MT '+safe(({A:1,B:2,C:3,D:4})[q.team]||q.team)+' · ronde '+safe(q.round)+'</strong><p>'+safe(q.question)+'</p><label>Antwoord</label><textarea id="answer-'+q.id+'">'+safe(q.answer||'')+'</textarea>'+btn('Verstuur antwoord','answer:'+q.id)+'</div>').join('')+'</section>';h+='<section class="card"><h2>Besluiten per team</h2><div class="grid">'+['A','B','C','D'].map(t=>'<div class="doc"><h2>MT '+({A:1,B:2,C:3,D:4}[t]||t)+'</h2>'+[1,2,3].map(r=>{const d=(s.decisions||[]).find(x=>x.team===t&&x.round===r);return '<p><b>Ronde '+r+':</b> '+(d?safe(d.decision):'Nog niet ingediend')+'</p>'}).join('')+'</div>').join('')+'</div>'+btn('Exporteer resultaten (JSON)','export','secondary')+'</section>';if(s.round===4)h+='<section class="card"><h2>Gezamenlijke onthulling</h2><p>Verzamel eerst de besluiten van alle MT’s en bespreek daarna de gedeelde werkelijkheid.</p>'+btn('Onthul gedeelde werkelijkheid','reveal')+'</section>';host.innerHTML=h}
 async function loadDoc(id){selectedDoc=id;const box=el('viewer');if(!box)return;box.textContent='Document laden…';try{const d=await request('/api/team/document?id='+encodeURIComponent(id));if(d.type==='html'){const frame=document.createElement('iframe');frame.sandbox='allow-scripts';frame.srcdoc=d.body;box.replaceChildren(frame)}else{box.innerHTML=d.body}}catch(e){box.textContent=e.message}}
-async function action(a){try{if(a.startsWith('doc:'))return loadDoc(a.slice(4));if(a==='ask'){await request('/api/team/ask',{question:el('question').value});return refresh()}if(a==='save'){await request('/api/team/decision',{observations:el('observations').value,decision:el('decision').value,reason:el('reason').value,confidence:+el('confidence').value});return refresh()}if(a==='init'){await request('/api/admin/init',{});return refresh()}if(a.startsWith('round:')){const n=+a.split(':')[1];if(confirm('Alle MT’s naar '+phases[n]+'?')){await request('/api/admin/advance',{round:n});return refresh()}return}if(a.startsWith('answer:')){const id=+a.split(':')[1];await request('/api/admin/answer',{id,answer:el('answer-'+id).value});return refresh()}if(a==='reveal'){await request('/api/admin/reveal',{});return refresh()}if(a==='reset'){if(confirm('Alle antwoorden en besluiten verwijderen en nieuwe sessie maken?')&&confirm('Definitief resetten?')){await request('/api/admin/reset',{});return refresh()}return}if(a==='refresh')return refresh();if(a==='export'){const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='mt-resultaten.json';link.click();URL.revokeObjectURL(link.href)}}catch(e){alert(e.message)}}
-// When an editor loses focus, show the newest round and messages.
-document.addEventListener('focusout',event=>{
- if(role!=='team'||!['TEXTAREA','INPUT','SELECT'].includes(event.target.tagName))return;
- // Allow the click on Save / Send to read the original fields first.
- setTimeout(()=>{if(!el('screen').contains(document.activeElement))refresh(false).catch(()=>{})},250);
+async function action(a){try{if(a==='apply-update'){if(formDirty&&!confirm('Niet-opgeslagen invoer gaat verloren. Toch bijwerken?'))return;formDirty=false;pendingUpdate=false;render();return}if(a.startsWith('doc:'))return loadDoc(a.slice(4));if(a==='ask'){await request('/api/team/ask',{question:el('question').value});formDirty=false;pendingUpdate=false;return refresh()}if(a==='save'){await request('/api/team/decision',{observations:el('observations').value,decision:el('decision').value,reason:el('reason').value,confidence:+el('confidence').value});formDirty=false;pendingUpdate=false;return refresh()}if(a==='init'){await request('/api/admin/init',{});return refresh()}if(a.startsWith('round:')){const n=+a.split(':')[1];if(confirm('Alle MT’s naar '+phases[n]+'?')){await request('/api/admin/advance',{round:n});return refresh()}return}if(a.startsWith('answer:')){const id=+a.split(':')[1];await request('/api/admin/answer',{id,answer:el('answer-'+id).value});return refresh()}if(a==='reveal'){await request('/api/admin/reveal',{});return refresh()}if(a==='reset'){if(confirm('Alle antwoorden en besluiten verwijderen en nieuwe sessie maken?')&&confirm('Definitief resetten?')){await request('/api/admin/reset',{});return refresh()}return}if(a==='refresh')return refresh();if(a==='export'){const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='mt-resultaten.json';link.click();URL.revokeObjectURL(link.href)}}catch(e){alert(e.message)}}
+// Preserve drafts. Silent polling never rebuilds a dirty participant form.
+document.addEventListener('input',event=>{
+ if(role==='team'&&el('screen').contains(event.target)&&
+   ['TEXTAREA','INPUT','SELECT'].includes(event.target.tagName)){
+   formDirty=true;
+ }
 });
 document.addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(b)action(b.dataset.action)});el('join').onclick=()=>login('team');el('admin').onclick=()=>login('admin');
 </script></body></html>
