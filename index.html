@@ -18,7 +18,7 @@ const root=()=> 'https://mt-informatiemanagement.koen-f98.workers.dev';
 async function request(path,payload){const headers={'Content-Type':'application/json'};if(role==='admin')headers.Authorization='Bearer '+credential;else headers['x-team-code']=credential;const response=await fetch(root()+path,{method:payload===undefined?'GET':'POST',headers,body:payload===undefined?undefined:JSON.stringify(payload),cache:'no-store'});const data=await response.json();if(!response.ok)throw Error(data.error||'Verbindingsfout');return data}
 const steps=n=>'<div class="steps">'+phases.map((p,i)=>'<span class="'+(n===i?'current':n>i?'past':'')+'">'+safe(p)+'</span>').join('')+'</div>';
 const btn=(text,action,cls='')=>'<button class="'+cls+'" data-action="'+action+'">'+safe(text)+'</button>';
-async function login(as){try{role=as;credential=el(as==='admin'?'secret':'teamcode').value.trim();if(!credential)throw Error('Vul je toegangscode in.');await refresh(true);el('login').classList.add('hidden');el('screen').classList.remove('hidden');if(poll)clearInterval(poll);poll=setInterval(()=>refresh(false).catch(()=>{}),8000)}catch(e){el('message').textContent=e.message}}
+async function login(as){try{role=as;credential=el(as==='admin'?'secret':'teamcode').value.trim();if(!credential)throw Error('Vul je toegangscode in.');await refresh(true);el('login').classList.add('hidden');el('screen').classList.remove('hidden');if(poll)clearInterval(poll);poll=setInterval(()=>refresh(false).catch(()=>{}),3000)}catch(e){el('message').textContent=e.message}}
 let formDirty=false;
 let pendingUpdate=false;
 const draftAnswers={};
@@ -45,36 +45,44 @@ function visibleStateSignature(x){
    decisions:(x.decisions||[]).map(d=>[d.round,d.observations,d.decision,d.reason,d.confidence])
  });
 }
+function renderDecisionRows(decisions){
+ return [1,2,3].map(r=>'<tr><th scope="row">Ronde '+r+'</th>'+['A','B','C','D'].map(t=>{
+  const d=decisions.find(x=>x.team===t&&Number(x.round)===r);
+  return '<td>'+(d?'<details class="decision-fold" data-key="'+t+'-'+r+'"><summary><span>Bekijk registratie</span><span class="score-tag">'+safe(d.confidence)+'/5</span></summary><div class="decision-fields"><strong>Waarnemingen en aannames</strong><p>'+safe(d.observations||'Niet ingevuld')+'</p><strong>Managementbesluit(en)</strong><p>'+safe(d.decision||'Niet ingevuld')+'</p><strong>Onderbouwing en onzekerheden</strong><p>'+safe(d.reason||'Niet ingevuld')+'</p><strong>Zekerheidsscore</strong><p>'+safe(d.confidence)+'/5</p></div></details>':'<span class="muted">Nog niet ingediend</span>')+'</td>';
+ }).join('')+'</tr>').join('');
+}
+function updateAdminDecisions(next){
+ const tbody=el('decision-rows');
+ if(!tbody)return;
+ const signature=JSON.stringify(next.decisions||[]);
+ if(tbody.dataset.signature===signature)return;
+ const open=new Set([...tbody.querySelectorAll('details[open]')].map(d=>d.dataset.key));
+ tbody.innerHTML=renderDecisionRows(next.decisions||[]);
+ tbody.dataset.signature=signature;
+ tbody.querySelectorAll('details').forEach(d=>{if(open.has(d.dataset.key))d.open=true});
+}
 async function refresh(initial=false){
  try{
-   const previous=state;
-   const next=await request(role==='admin'?'/api/admin/state':'/api/team/state');
-   const changed=initial||visibleStateSignature(previous)!==visibleStateSignature(next);
-   const roundChanged=previous&&previous.round!==next.round;
-   state=next;
-   if(!changed)return;
-   // A document must never be reloaded merely because a background poll ran.
-   // During the same round, team members choose when to show new answers.
-   if(!initial&&role==='team'&&!roundChanged){
-     pendingUpdate=true;
-     notifyUpdate();
-     return;
-   }
-   // Never replace any draft, including the teacher's unsent responses.
-   if(!initial&&formDirty){
-     pendingUpdate=true;
-     notifyUpdate();
-     return;
-   }
-   pendingUpdate=false;
-   if(roundChanged)selectedDoc=null;
-   render();
+  const prev=state;
+  const next=await request(role==='admin'?'/api/admin/state':'/api/team/state');
+  const changed=initial||visibleStateSignature(prev)!==visibleStateSignature(next);
+  const roundChanged=prev&&prev.round!==next.round;
+  state=next;
+  if(!changed)return;
+  if(role==='admin'&&!initial&&!roundChanged&&prev&&!prev.uninitialized){
+    updateAdminDecisions(next);
+    if(JSON.stringify(prev.questions||[])!==JSON.stringify(next.questions||[])&&!formDirty){render()}
+    return;
+  }
+  if(!initial&&role==='team'&&!roundChanged){pendingUpdate=true;notifyUpdate();return}
+  if(!initial&&formDirty){pendingUpdate=true;notifyUpdate();return}
+  pendingUpdate=false;
+  if(roundChanged)selectedDoc=null;
+  render();
  }catch(e){
-   if(role==='admin'&&/sessie nog starten/i.test(e.message)){
-     state={uninitialized:true};render();return;
-   }
-   if(initial)throw e;
-   el('screen').dataset.connection='offline';
+  if(role==='admin'&&/sessie nog starten/i.test(e.message)){state={uninitialized:true};render();return}
+  if(initial)throw e;
+  el('screen').dataset.connection='offline';
  }
 }
 function render(){const host=el('screen');if(role==='admin')return renderAdmin(host);renderTeam(host)}
@@ -165,15 +173,34 @@ async function loadDashboard(documents){
  }
 }
 function renderAdmin(host){if(state.uninitialized){host.innerHTML='<section class="card"><h1>Docentbediening</h1><p>Er is nog geen sessie. Start een nieuwe oefening en deel daarna de teamcodes uit.</p>'+btn('Nieuwe sessie starten','init')+'</section>';return}const s=state;let h='<section class="card"><h1>Docentbediening</h1>'+steps(s.round)+'<h2>'+safe(phases[s.round])+'</h2>'+[1,2,3,4].map(n=>'<button '+(n<=s.round?'disabled':'')+' data-action="round:'+n+'">'+(n===4?'Naar eindresultaat':'Start ronde '+n)+'</button>').join('')+btn('Vernieuwen','refresh','secondary')+btn('Reset sessie','reset','danger')+'</section><section class="card"><h2>Teamcodes</h2><div class="grid">'+(s.codes||[]).map(c=>'<div class="doc"><strong>MT '+safe(({A:1,B:2,C:3,D:4})[c.team]||c.team)+'</strong><p><code>'+safe(c.code)+'</code></p></div>').join('')+'</div></section>';h+='<section class="card"><h2>Informatievragen</h2>'+(s.questions||[]).map(q=>'<div class="doc"><strong>MT '+safe(({A:1,B:2,C:3,D:4})[q.team]||q.team)+' · ronde '+safe(q.round)+'</strong><p>'+safe(q.question)+'</p><label>Antwoord</label><textarea id="answer-'+q.id+'">'+safe(Object.prototype.hasOwnProperty.call(draftAnswers,q.id)?draftAnswers[q.id]:(q.answer||''))+'</textarea>'+(q.answer?'<p class="okay" role="status">✓ Antwoord verzonden naar MT '+safe(({A:1,B:2,C:3,D:4})[q.team]||q.team)+(lastSentAnswerId===q.id?' – zojuist bevestigd':'')+'</p><div class="doc"><strong>Verzonden antwoord</strong><p>'+safe(q.answer)+'</p></div>':'<p class="muted">Nog geen antwoord verzonden.</p>')+btn(q.answer?'Antwoord bijwerken':'Verstuur antwoord','answer:'+q.id)+'</div>').join('')+'</section>';h+='<section class="card"><div class="decisions-header"><div><h2>Besluiten per MT en ronde</h2><p class="muted">Elke ronde staat op dezelfde hoogte voor alle managementteams. Klik op een cel voor de volledige registratie.</p></div><div class="decisions-actions">'+btn('Alles uitklappen','expand-all','secondary')+btn('Alles inklappen','collapse-all','secondary')+'</div></div>'+
-'<div class="comparison-scroll"><table class="comparison-table"><thead><tr><th scope="col">Ronde</th>'+['1','2','3','4'].map(n=>'<th scope="col">MT '+n+'</th>').join('')+'</tr></thead><tbody>'+
-[1,2,3].map(r=>'<tr><th scope="row">Ronde '+r+'</th>'+['A','B','C','D'].map(t=>{const d=(s.decisions||[]).find(x=>x.team===t&&x.round===r);return '<td>'+(d?'<details class="decision-fold"><summary><span>Bekijk registratie</span><span class="score-tag">'+safe(d.confidence)+'/5</span></summary><div class="decision-fields"><strong>Waarnemingen en aannames</strong><p>'+safe(d.observations||'Niet ingevuld')+'</p><strong>Managementbesluit(en)</strong><p>'+safe(d.decision||'Niet ingevuld')+'</p><strong>Onderbouwing en onzekerheden</strong><p>'+safe(d.reason||'Niet ingevuld')+'</p><strong>Zekerheidsscore</strong><p>'+safe(d.confidence)+'/5</p></div></details>':'<span class="muted">Nog niet ingediend</span>')+'</td>'}).join('')+'</tr>').join('')+
-'</tbody></table></div><p class="muted">De Excel-export bevat alle rondes en alle ingevulde velden, ook wanneer ze hier zijn ingeklapt.</p>'+btn('Exporteer resultaten naar Excel (.xlsx)','export-excel','secondary')+'</section>';if(s.round===4)h+='<section class="card"><h2>Gezamenlijke onthulling</h2><p>Verzamel eerst de besluiten van alle MT’s en bespreek daarna de gedeelde werkelijkheid.</p>'+btn('Onthul gedeelde werkelijkheid','reveal')+'</section>';host.innerHTML=h}
+'<div class="comparison-scroll"><table class="comparison-table"><thead><tr><th scope="col">Ronde</th>'+['1','2','3','4'].map(n=>'<th scope="col">MT '+n+'</th>').join('')+'</tr></thead><tbody id="decision-rows">'+
+renderDecisionRows(s.decisions||[])+
+'</tbody></table></div><p class="muted">De Excel-export bevat alle rondes en alle ingevulde velden, ook wanneer ze hier zijn ingeklapt.</p>'+btn('Exporteer resultaten naar Excel (.xlsx)','export-excel','secondary')+'</section>';if(s.round===4)h+='<section class="card"><h2>Gezamenlijke onthulling</h2><p>Verzamel eerst de besluiten van alle MT’s en bespreek daarna de gedeelde werkelijkheid.</p>'+btn('Onthul gedeelde werkelijkheid','reveal')+'</section>';host.innerHTML=h;const tableRows=el('decision-rows');if(tableRows)tableRows.dataset.signature=JSON.stringify(s.decisions||[])}
 async function loadDoc(id){selectedDoc=id;const box=el('viewer');if(!box)return;box.textContent='Document laden…';try{const d=await request('/api/team/document?id='+encodeURIComponent(id));if(d.type==='html'){const frame=document.createElement('iframe');frame.sandbox='allow-scripts';frame.srcdoc=d.body;box.replaceChildren(frame)}else{box.innerHTML=d.body}}catch(e){box.textContent=e.message}}
 async function action(a){try{if(a==='apply-update'){if(role==='team'&&formDirty&&!confirm('Niet-opgeslagen invoer gaat verloren. Toch bijwerken?'))return;if(role==='team')formDirty=false;pendingUpdate=false;render();return}if(a==='expand-all'||a==='collapse-all'){
  document.querySelectorAll('.decision-fold').forEach(item=>item.open=(a==='expand-all'));
  return;
 }if(a==='export-excel'){const latest=await request('/api/admin/state');await window.exportMTExcel(latest);return}
-if(a==='dashboard'){const host=el('dashboard-host');if(host)host.scrollIntoView({behavior:'smooth',block:'start'});return}if(a.startsWith('doc:'))return loadDoc(a.slice(4));if(a==='ask'){await request('/api/team/ask',{question:el('question').value});formDirty=false;pendingUpdate=false;return refresh()}if(a==='save'){await request('/api/team/decision',{observations:el('observations').value,decision:el('decision').value,reason:el('reason').value,confidence:+el('confidence').value});formDirty=false;pendingUpdate=false;return refresh()}if(a==='init'){await request('/api/admin/init',{});return refresh()}if(a.startsWith('round:')){const n=+a.split(':')[1];if(confirm('Alle MT’s naar '+phases[n]+'?')){await request('/api/admin/advance',{round:n});return refresh()}return}if(a.startsWith('answer:')){
+if(a==='dashboard'){const host=el('dashboard-host');if(host)host.scrollIntoView({behavior:'smooth',block:'start'});return}if(a.startsWith('doc:'))return loadDoc(a.slice(4));if(a==='ask'){await request('/api/team/ask',{question:el('question').value});formDirty=false;pendingUpdate=false;return refresh()}if(a==='save'){
+ const round=state.round;
+ const data={observations:el('observations').value,decision:el('decision').value,reason:el('reason').value,confidence:+el('confidence').value};
+ const button=document.querySelector('[data-action="save"]');
+ let status=el('save-confirmation');
+ if(!status){status=document.createElement('p');status.id='save-confirmation';status.setAttribute('role','status');status.setAttribute('aria-live','polite');button?.insertAdjacentElement('afterend',status)}
+ if(button){button.disabled=true;button.textContent='Opslaan…'}
+ status.className='muted';status.textContent='Besluit wordt opgeslagen…';
+ try{
+  await request('/api/team/decision',data);
+  const verified=await request('/api/team/state');
+  const saved=(verified.decisions||[]).find(d=>Number(d.round)===round);
+  if(!saved||saved.observations!==data.observations||saved.decision!==data.decision||saved.reason!==data.reason||Number(saved.confidence)!==data.confidence)throw Error('Opslag niet bevestigd');
+  state=verified;formDirty=false;pendingUpdate=false;
+  status.className='okay';status.textContent='✓ Besluit opgeslagen. Het is nu beschikbaar in het docentoverzicht.';
+  if(button)button.textContent='Besluit opnieuw opslaan';
+ }catch(err){status.className='bad';status.textContent='Opslaan mislukt: '+err.message;throw err}
+ finally{if(button)button.disabled=false}
+ return;
+}if(a==='init'){await request('/api/admin/init',{});return refresh()}if(a.startsWith('round:')){const n=+a.split(':')[1];if(confirm('Alle MT’s naar '+phases[n]+'?')){await request('/api/admin/advance',{round:n});return refresh()}return}if(a.startsWith('answer:')){
  const id=+a.split(':')[1];
  const field=el('answer-'+id);
  const answer=field?.value.trim()||'';
