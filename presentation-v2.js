@@ -18,6 +18,7 @@ function cleanText(text){
  for(const p of disclaimerPatterns)output=output.replace(p,"");
  return output.replace(/Provincie Noord-Holland/gi,"de provincie")
   .replace(/\bPNH\b/g,"provincie")
+  .replace(/MT B&U/gi,"het MT")
   .replace(/\bB&U\b/g,"beheerorganisatie");
 }
 function cleanTree(root){
