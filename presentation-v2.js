@@ -3,8 +3,8 @@
 (function(){
 "use strict";
 const disclaimerPatterns=[
- /Fictieve oefengegevens\s*[–-]\s*geen werkelijke (?:PNH[- ]prestaties|prestaties van Provincie Noord-Holland)[.\s]*/gi,
- /Kwartalen zijn een scenarioreeks[.\s]*/gi
+ /Fictieve oefengegevens\s*[–—-]\s*geen werkelijke (?:PNH[- ]prestaties|prestaties van (?:Provincie Noord-Holland|de provincie)|prestaties)\.?\s*/gi,
+ /Kwartalen zijn een scenarioreeks\.?\s*/gi
 ];
 function cleanText(text){
  let output=String(text||"");
