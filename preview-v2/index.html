@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MT aan het stuur | Digitale simulatie</title>
+<style>
+:root{font:16px system-ui,Arial,sans-serif;background:#f2f5fa;color:#1c2b43}*{box-sizing:border-box}body{margin:0}header{background:#22345f;color:white;padding:18px max(20px,calc((100vw - 1200px)/2))}header small{opacity:.8}main{max-width:1200px;margin:25px auto;padding:0 20px}.card{background:#fff;padding:22px;border-radius:12px;margin-bottom:16px;border:1px solid #dce3ee;box-shadow:0 4px 12px #14234208}h1,h2{margin:0 0 14px}h1{font-size:24px}h2{font-size:19px}p{line-height:1.6}button{border:0;border-radius:7px;padding:10px 14px;background:#265b9f;color:white;font-weight:650;cursor:pointer;margin:5px 6px 5px 0}button.secondary{background:#e7eef7;color:#254b80}button.danger{background:#a63134}button:disabled{opacity:.45;cursor:not-allowed}input,textarea,select{width:100%;border:1px solid #c4cede;border-radius:7px;padding:11px;font:inherit}textarea{min-height:85px;resize:vertical}label{display:block;font-weight:650;margin:13px 0 5px;font-size:14px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(265px,1fr));gap:14px}.doc{background:#fafcff;padding:15px;border:1px solid #dce5f0;border-radius:8px;margin:9px 0}.muted{color:#60718c;font-size:14px}.bad{color:#a92730}.okay{color:#17694b}.steps{display:flex;gap:5px;margin:17px 0}.steps span{flex:1;font-size:12px;padding:9px 3px;text-align:center;background:#e8edf4;border-radius:5px}.steps .current{background:#245b9f;color:#fff}.steps .past{background:#dcefe2}#viewer{padding:12px;max-height:74vh;overflow:auto}#viewer table{border-collapse:collapse;width:100%}#viewer td,#viewer th{border:1px solid #d8e0ee;padding:7px}iframe{height:68vh;width:100%;border:1px solid #dce3ee}.hidden{display:none}@media(min-width:850px){.split{display:grid;grid-template-columns:340px 1fr;gap:14px}}.note{border-left:4px solid #d0a23f;padding:12px;background:#fff8e9;margin:12px 0}.doc-new{border-color:#82b5e8;background:#f4f9ff}.new-label{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;background:#d8ecff;color:#144e85;font-size:12px;font-weight:750;margin-left:8px;white-space:nowrap}.new-info{border-left:4px solid #2e72b8;background:#edf6ff;padding:10px 12px;border-radius:5px;margin:12px 0;font-size:14px}.panel-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.panel-heading h2{margin-bottom:4px}.dash-toolbar{background:#f0f5fb;padding:10px 14px;border-radius:8px;display:flex;align-items:center;justify-content:space-between;margin:10px 0}.dashboard-host{background:#f7f9fc;border:1px solid #d9e2ed;border-radius:9px;padding:9px}
+.decision-detail{border-top:1px solid #dce5f0;padding:14px 0}.decision-detail:first-of-type{border-top:0}.decision-detail h3{font-size:15px;margin:0 0 10px}.decision-detail div{margin:0 0 10px}.decision-detail p{margin:5px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}.decision-detail .confidence{background:#edf3fb;border-radius:7px;padding:8px 10px}.decisions-header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}.decisions-actions{display:flex;gap:6px;flex-wrap:wrap}.comparison-scroll{overflow-x:auto;margin:14px 0}.comparison-table{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;min-width:890px}.comparison-table th,.comparison-table td{padding:12px;border-right:1px solid #dce4ed;border-bottom:1px solid #dce4ed;vertical-align:top;text-align:left;background:#fff}.comparison-table thead th{background:#eaf0f7;font-size:14px}.comparison-table th:first-child{width:96px;background:#f3f6fa}.comparison-table thead th:first-child{background:#eaf0f7}.comparison-table tr>*:first-child{border-left:1px solid #dce4ed}.comparison-table thead tr:first-child>*{border-top:1px solid #dce4ed}.decision-fold summary{cursor:pointer;font-weight:650;color:#225794;display:flex;align-items:center;justify-content:space-between;gap:7px;font-size:13px;list-style-position:inside}.decision-fold .decision-fields{padding-top:14px}.decision-fields strong{font-size:13px;display:block}.decision-fields p{white-space:pre-wrap;overflow-wrap:anywhere;margin:5px 0 15px;font-size:13px;line-height:1.5}.score-tag{background:#eaf1fa;color:#315b86;border-radius:5px;padding:4px 6px;font-size:12px;white-space:nowrap}.decision-fold[open] summary{padding-bottom:8px;border-bottom:1px solid #dfe7f0}</style><link rel="stylesheet" href="design-v2.css?v=2"></head><body>
+<header><strong>◈ &nbsp;MT aan het stuur <span style="font-size:11px;background:#5ab3b2;color:#15344c;padding:5px 9px;border-radius:7px;margin-left:7px">V2 PROEFVERSIE</span></strong><div><small>Digitale provinciale regiekamer · oefening informatiemanagement</small></div></header>
+<main><section class="card" id="login"><h1>Welkom</h1><p>Vul je vaste MT-code in (MT1, MT2, MT3 of MT4). Opleiders kunnen aanmelden met het docentgeheim.</p>
+
+<div class="grid"><div><label for="teamcode">Teamcode</label><input id="teamcode" autocomplete="off"><button id="join">Open MT-scherm</button></div><div><label for="secret">Docentgeheim</label><input id="secret" type="password"><button id="admin" class="secondary">Open docentbediening</button></div></div>
+<p id="message" class="bad" role="alert"></p></section><section id="screen" class="hidden"></section></main>
+<script>
+'use strict';
+const el=x=>document.getElementById(x),safe=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const phases=['Wachten op start','Ronde 1 – Signaleren','Ronde 2 – Verklaren','Ronde 3 – Besluiten','Eindresultaat'];
+let role='',credential='',state=null,selectedDoc=null,poll=null;
+const root=()=> 'https://mt-informatiemanagement.koen-f98.workers.dev';
+async function request(path,payload){const headers={'Content-Type':'application/json'};if(role==='admin')headers.Authorization='Bearer '+credential;else headers['x-team-code']=credential;const response=await fetch(root()+path,{method:payload===undefined?'GET':'POST',headers,body:payload===undefined?undefined:JSON.stringify(payload),cache:'no-store'});const data=await response.json();if(!response.ok)throw Error(data.error||'Verbindingsfout');return data}
+const steps=n=>'<div class="steps">'+phases.map((p,i)=>'<span class="'+(n===i?'current':n>i?'past':'')+'">'+safe(p)+'</span>').join('')+'</div>';
+const btn=(text,action,cls='')=>'<button class="'+cls+'" data-action="'+action+'">'+safe(text)+'</button>';
+async function login(as){try{role=as;credential=el(as==='admin'?'secret':'teamcode').value.trim();if(!credential)throw Error('Vul je toegangscode in.');await refresh(true);el('login').classList.add('hidden');el('screen').classList.remove('hidden');if(poll)clearInterval(poll);poll=setInterval(()=>refresh(false).catch(()=>{}),3000)}catch(e){el('message').textContent=e.message}}
+let formDirty=false;
+let pendingUpdate=false;
+const draftAnswers={};
+let lastSentAnswerId=null;
+function notifyUpdate(){
+ let n=el('mt-update-notice');
+ if(!n){
+   n=document.createElement('div');
+   n.id='mt-update-notice';
+   n.className='note';
+   n.style.cssText='position:sticky;top:0;z-index:20;margin:0 0 10px';
+   el('screen').prepend(n);
+ }
+ n.innerHTML='Er is nieuwe informatie beschikbaar. Je invoer blijft bewaard. <button type="button" data-action="apply-update" class="secondary">Bijwerken</button>';
+}
+function visibleStateSignature(x){
+ if(!x)return '';
+ if(role==='admin')return JSON.stringify(x);
+ // Ignore changes which do not affect visible participant content.
+ return JSON.stringify({
+   round:x.round,revealed:x.revealed,team:x.team,
+   documents:(x.documents||[]).map(d=>[d.id,d.round,d.title,d.type]),
+   questions:(x.questions||[]).map(q=>[q.id,q.question,q.answer]),
+   decisions:(x.decisions||[]).map(d=>[d.round,d.observations,d.decision,d.reason,d.confidence])
+ });
+}
+function renderDecisionRows(decisions){
+ return [1,2,3].map(r=>'<tr><th scope="row">Ronde '+r+'</th>'+['A','B','C','D'].map(t=>{
+  const d=decisions.find(x=>x.team===t&&Number(x.round)===r);
+  return '<td>'+(d?'<details class="decision-fold" data-key="'+t+'-'+r+'"><summary><span>Bekijk registratie</span><span class="score-tag">'+safe(d.confidence)+'/5</span></summary><div class="decision-fields"><strong>Waarnemingen en aannames</strong><p>'+safe(d.observations||'Niet ingevuld')+'</p><strong>Managementbesluit(en)</strong><p>'+safe(d.decision||'Niet ingevuld')+'</p><strong>Onderbouwing en onzekerheden</strong><p>'+safe(d.reason||'Niet ingevuld')+'</p><strong>Zekerheidsscore</strong><p>'+safe(d.confidence)+'/5</p></div></details>':'<span class="muted">Nog niet ingediend</span>')+'</td>';
+ }).join('')+'</tr>').join('');
+}
+function updateAdminDecisions(next){
+ const tbody=el('decision-rows');
+ if(!tbody)return;
+ const signature=JSON.stringify(next.decisions||[]);
+ if(tbody.dataset.signature===signature)return;
+ const open=new Set([...tbody.querySelectorAll('details[open]')].map(d=>d.dataset.key));
+ tbody.innerHTML=renderDecisionRows(next.decisions||[]);
+ tbody.dataset.signature=signature;
+ tbody.querySelectorAll('details').forEach(d=>{if(open.has(d.dataset.key))d.open=true});
+}
+async function refresh(initial=false){
+ try{
+  const prev=state;
+  const next=await request(role==='admin'?'/api/admin/state':'/api/team/state');
+  const changed=initial||visibleStateSignature(prev)!==visibleStateSignature(next);
+  const roundChanged=prev&&prev.round!==next.round;
+  state=next;
+  if(!changed)return;
+  if(role==='admin'&&!initial&&!roundChanged&&prev&&!prev.uninitialized){
+    updateAdminDecisions(next);
+    if(JSON.stringify(prev.questions||[])!==JSON.stringify(next.questions||[])&&!formDirty){render()}
+    return;
+  }
+  if(!initial&&role==='team'&&!roundChanged){pendingUpdate=true;notifyUpdate();return}
+  if(!initial&&formDirty){pendingUpdate=true;notifyUpdate();return}
+  pendingUpdate=false;
+  if(roundChanged)selectedDoc=null;
+  render();
+ }catch(e){
+  if(role==='admin'&&/sessie nog starten/i.test(e.message)){state={uninitialized:true};render();return}
+  if(initial)throw e;
+  el('screen').dataset.connection='offline';
+ }
+}
+function render(){const host=el('screen');if(role==='admin')return renderAdmin(host);renderTeam(host)}
+function renderTeam(host){
+ const s=state,r=s.round,docs=s.documents||[];
+ const integrated=s.team==='C'||s.team==='D';
+ const dashIds=s.team==='C'?['c21','c32']:s.team==='D'?['d21','d31']:[];
+ const dashAvailable=docs.filter(d=>dashIds.includes(d.id));
+ const supplements=integrated?docs.filter(d=>!dashIds.includes(d.id)):docs;
+ const dashReleased=dashAvailable.length>0;
+ const newCount=supplements.filter(d=>d.round===r).length;
+ const newDash=dashAvailable.some(d=>d.round===r)&&r<=3;
+ let h='<section class="card mt-hero"><div class="mt-hero-top"><div><div class="mt-eyebrow">◈ &nbsp; Provinciaal Beheer & Uitvoering</div><h1>Managementteam '+safe(({A:1,B:2,C:3,D:4})[s.team]||s.team)+'</h1><p>Jullie sturen op de assetmanagementdoelstellingen van een fictieve beheerorganisatie.</p></div><div class="mt-round-tag">'+safe(phases[r])+'</div></div>'+steps(r);
+ if(r===0)h+='<div class="note">De eerste informatieronde wordt door de opleider gestart.</div>';
+ if(r>0)h+='</section><nav class="mt-nav" aria-label="Onderdelen"><a href="#doelen"><span class="nav-dot"></span>Doelstellingen</a>'+(integrated?'<a href="#dashboard"><span class="nav-dot"></span>Dashboard</a>':'')+'<a href="#documenten"><span class="nav-dot"></span>Informatiedossier</a><a href="#informatievragen"><span class="nav-dot"></span>Informatievragen</a><a href="#besluiten"><span class="nav-dot"></span>Besluiten</a></nav><section class="card mt-goals" id="doelen"><h2 class="mt-section-title">Assetmanagementdoelstellingen</h2><ul>'+(s.samp||[]).map(x=>'<li>'+safe(x)+'</li>').join('')+'</ul>';
+ if(s.revealed)h+='<div class="note"><strong>Onthulling:</strong> alle managementteams bestuurden dezelfde fictieve organisatie en kregen verschillende informatie.</div>';
+ h+='</section>';
+ if(r>0){
+  if(integrated){
+   h+='<section class="card mt-dashboard-card" id="dashboard"><div class="panel-heading"><div><h2 class="mt-section-title">Managementdashboard</h2><p class="muted">Eén samenhangend overzicht. Nieuwe onderdelen verschijnen zodra de volgende informatieronde is vrijgegeven.</p></div>'+(newDash?'<span class="new-label">Nieuw</span>':'')+'</div>';
+   if(dashReleased){
+    h+='<div class="dash-toolbar"><span>'+safe(s.team==='C'?'Middelen en ontwikkeling':'Integrale doelsturing')+'</span>'+btn('Dashboard openen','dashboard','secondary')+'</div><div id="dashboard-host" class="dashboard-host"><div class="muted">Open het dashboard om alle vrijgegeven onderdelen samen te bekijken.</div></div>';
+   }else{
+    h+='<div class="note">Het managementdashboard wordt in een volgende informatieronde beschikbaar gesteld.</div>';
+   }
+   h+='</section>';
+  }
+  h+='<div class="split" id="documenten"><section class="card mt-documents-card"><div class="mt-doc-header">DIGITAAL INFORMATIEDOSSIER</div><h2 class="mt-section-title">'+(integrated?'Aanvullende documenten':'Beschikbare informatie')+'</h2><p class="muted">Vrijgegeven notities en correspondentie blijven beschikbaar.</p>'+
+   (r<=3?'<div class="new-info"><strong>Ronde '+r+': '+newCount+' nieuwe documenten</strong><div>Nieuwe documenten staan bovenaan.</div></div>':'')+
+   [...supplements].sort((x,y)=>y.round-x.round).map(d=>
+    '<div class="doc'+(d.round===r&&r<=3?' doc-new':'')+'"><b>'+safe(d.title)+'</b>'+
+    (d.round===r&&r<=3?'<span class="new-label">Nieuw</span>':'')+
+    '<p class="muted">Notitie of correspondentie</p>'+btn('Open document','doc:'+d.id,'secondary')+'</div>'
+   ).join('')+'</section><section class="card"><h2 class="mt-section-title">Documentlezer</h2><div id="viewer">Selecteer links een document.</div></section></div>';
+  h+='<div class="grid"><section class="card mt-question-card" id="informatievragen"><h2 class="mt-section-title">Informatievragen</h2><p class="muted">Maximaal twee vragen in de eerste twee rondes.</p>'+
+  (s.questions||[]).map(q=>'<div class="doc"><b>Vraag</b><p>'+safe(q.question)+'</p><b>Antwoord</b><p>'+safe(q.answer||'Nog niet beantwoord')+'</p></div>').join('');
+  if(r<=2&&(s.questions||[]).length<2)h+='<label>Welke aanvullende informatie hebben jullie nodig?</label><textarea id="question"></textarea>'+btn('Vraag indienen','ask');
+  h+='</section><section class="card mt-decision-card" id="besluiten"><h2 class="mt-section-title">Besluitregistratie</h2><p class="muted">Leg jullie diagnose, besluit en mate van zekerheid vast. Na opslaan wordt de registratie zichtbaar voor de docent.</p>';
+  if(r<=3){
+   const old=(s.decisions||[]).find(d=>d.round===r)||{};
+   h+='<label>Waarnemingen en aannames</label><textarea id="observations">'+safe(old.observations||'')+'</textarea>'+
+   '<label>Besluit(en)</label><textarea id="decision">'+safe(old.decision||'')+'</textarea>'+
+   '<label>Onderbouwing en onzekerheden</label><textarea id="reason">'+safe(old.reason||'')+'</textarea>'+
+   '<label>Zekerheid (1–5)</label><select id="confidence">'+[1,2,3,4,5].map(n=>'<option value="'+n+'" '+((old.confidence||3)===n?'selected':'')+'>'+n+'</option>').join('')+'</select>'+btn('Besluit opslaan','save');
+  }else h+='<p>De besluitvorming is gesloten.</p>';
+  h+='<h2>Eerdere besluiten</h2>'+(s.decisions||[]).map(d=>'<div class="doc"><b>Ronde '+safe(d.round)+'</b><p>'+safe(d.decision)+'</p></div>').join('')+'</section></div>';
+ }
+ host.innerHTML=h;
+ if(integrated&&dashReleased)loadDashboard(dashAvailable);
+}
+async function loadDashboard(documents){
+ const target=el('dashboard-host');
+ if(!target||!documents.length)return;
+ const key=documents.map(d=>d.id).join(',');
+ // Cache one coherent dashboard per released set. Never reload it on a timer.
+ if(target.dataset.dashboardKey===key)return;
+ target.dataset.dashboardKey=key;
+ target.innerHTML='<p class="muted">Dashboard wordt geladen…</p>';
+ try{
+  const parts=await Promise.all(documents.map(async d=>{
+    const result=await request('/api/team/document?id='+encodeURIComponent(d.id));
+    return {title:d.title,html:result.body};
+  }));
+  if(!target.isConnected)return;
+  const sections=parts.map((p,i)=>{
+    const parsed=new DOMParser().parseFromString(p.html,'text/html');
+    const article=parsed.querySelector('article');
+    if(!article)throw Error('Dashboardonderdeel ontbreekt.');
+    const header=article.querySelector('header');
+    if(header)header.remove();
+    const note=article.querySelector('p');
+    if(note&&note.textContent.includes('Fictieve oefengegevens'))note.remove();
+    return '<section class="module" id="onderdeel-'+i+'">'+article.innerHTML+'</section>';
+  }).join('');
+  const combined='<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'+
+  '<style>body{background:#f5f8fc;color:#233147;font:15px system-ui,Arial;margin:0;padding:12px} nav{display:flex;gap:8px;flex-wrap:wrap;position:sticky;top:0;background:#f5f8fc;padding:8px 0;z-index:2} nav a{color:#174f82;background:#dcecf9;padding:8px 12px;text-decoration:none;border-radius:6px;font-weight:600}.module{background:white;border:1px solid #dce3ec;border-radius:10px;padding:16px;margin:14px 0}section.chart{box-shadow:none}.module h2{font-size:19px}table{width:100%;border-collapse:collapse}td,th{padding:8px;border:1px solid #d5dce6}@media(max-width:720px){.module{padding:8px}}</style></head><body>'+
+  '<nav>'+parts.map((p,i)=>'<a href="#onderdeel-'+i+'">'+safe(i===0?'Kernoverzicht':(state.team==='C'?'Ontwikkelvermogen':'Interventieafweging'))+'</a>').join('')+'</nav>'+
+  '<p style="font-size:12px;color:#687b91">Fictieve oefengegevens – geen werkelijke PNH-prestaties.</p>'+sections+'</body></html>';
+  const iframe=document.createElement('iframe');
+  iframe.title='Managementdashboard';
+  iframe.sandbox='allow-scripts';
+  iframe.style.cssText='width:100%;height:950px;max-height:none;border:0;border-radius:8px;background:#fff';
+  iframe.srcdoc=combined;
+  target.replaceChildren(iframe);
+ }catch(e){
+  if(target.isConnected)target.textContent='Dashboard kon niet worden geladen: '+e.message;
+ }
+}
+function renderAdmin(host){if(state.uninitialized){host.innerHTML='<section class="card"><h1>Docentbediening</h1><p>Er is nog geen sessie. Start een nieuwe oefening en deel daarna de teamcodes uit.</p>'+btn('Nieuwe sessie starten','init')+'</section>';return}const s=state;let h='<section class="card"><h1>Docentbediening</h1>'+steps(s.round)+'<h2>'+safe(phases[s.round])+'</h2>'+[1,2,3,4].map(n=>'<button '+(n<=s.round?'disabled':'')+' data-action="round:'+n+'">'+(n===4?'Naar eindresultaat':'Start ronde '+n)+'</button>').join('')+btn('Vernieuwen','refresh','secondary')+btn('Reset sessie','reset','danger')+'</section><section class="card"><h2>Teamcodes</h2><div class="grid">'+(s.codes||[]).map(c=>'<div class="doc"><strong>MT '+safe(({A:1,B:2,C:3,D:4})[c.team]||c.team)+'</strong><p><code>'+safe(c.code)+'</code></p></div>').join('')+'</div></section>';h+='<section class="card"><h2>Informatievragen</h2>'+(s.questions||[]).map(q=>'<div class="doc"><strong>MT '+safe(({A:1,B:2,C:3,D:4})[q.team]||q.team)+' · ronde '+safe(q.round)+'</strong><p>'+safe(q.question)+'</p><label>Antwoord</label><textarea id="answer-'+q.id+'">'+safe(Object.prototype.hasOwnProperty.call(draftAnswers,q.id)?draftAnswers[q.id]:(q.answer||''))+'</textarea>'+(q.answer?'<p class="okay" role="status">✓ Antwoord verzonden naar MT '+safe(({A:1,B:2,C:3,D:4})[q.team]||q.team)+(lastSentAnswerId===q.id?' – zojuist bevestigd':'')+'</p><div class="doc"><strong>Verzonden antwoord</strong><p>'+safe(q.answer)+'</p></div>':'<p class="muted">Nog geen antwoord verzonden.</p>')+btn(q.answer?'Antwoord bijwerken':'Verstuur antwoord','answer:'+q.id)+'</div>').join('')+'</section>';h+='<section class="card"><div class="decisions-header"><div><h2>Besluiten per MT en ronde</h2><p class="muted">Elke ronde staat op dezelfde hoogte voor alle managementteams. Klik op een cel voor de volledige registratie.</p></div><div class="decisions-actions">'+btn('Alles uitklappen','expand-all','secondary')+btn('Alles inklappen','collapse-all','secondary')+'</div></div>'+
+'<div class="comparison-scroll"><table class="comparison-table"><thead><tr><th scope="col">Ronde</th>'+['1','2','3','4'].map(n=>'<th scope="col">MT '+n+'</th>').join('')+'</tr></thead><tbody id="decision-rows">'+
+renderDecisionRows(s.decisions||[])+
+'</tbody></table></div><p class="muted">De Excel-export bevat alle rondes en alle ingevulde velden, ook wanneer ze hier zijn ingeklapt.</p>'+btn('Exporteer resultaten naar Excel (.xlsx)','export-excel','secondary')+'</section>';if(s.round===4)h+='<section class="card"><h2>Gezamenlijke onthulling</h2><p>Verzamel eerst de besluiten van alle MT’s en bespreek daarna de gedeelde werkelijkheid.</p>'+btn('Onthul gedeelde werkelijkheid','reveal')+'</section>';host.innerHTML=h;const tableRows=el('decision-rows');if(tableRows)tableRows.dataset.signature=JSON.stringify(s.decisions||[])}
+async function loadDoc(id){selectedDoc=id;const box=el('viewer');if(!box)return;box.textContent='Document laden…';try{const d=await request('/api/team/document?id='+encodeURIComponent(id));if(d.type==='html'){const frame=document.createElement('iframe');frame.sandbox='allow-scripts';frame.srcdoc=d.body;box.replaceChildren(frame)}else{box.innerHTML=d.body}}catch(e){box.textContent=e.message}}
+async function action(a){try{if(a==='apply-update'){if(role==='team'&&formDirty&&!confirm('Niet-opgeslagen invoer gaat verloren. Toch bijwerken?'))return;if(role==='team')formDirty=false;pendingUpdate=false;render();return}if(a==='expand-all'||a==='collapse-all'){
+ document.querySelectorAll('.decision-fold').forEach(item=>item.open=(a==='expand-all'));
+ return;
+}if(a==='export-excel'){const latest=await request('/api/admin/state');await window.exportMTExcel(latest);return}
+if(a==='dashboard'){const host=el('dashboard-host');if(host)host.scrollIntoView({behavior:'smooth',block:'start'});return}if(a.startsWith('doc:'))return loadDoc(a.slice(4));if(a==='ask'){await request('/api/team/ask',{question:el('question').value});formDirty=false;pendingUpdate=false;return refresh()}if(a==='save'){
+ const round=state.round;
+ const data={observations:el('observations').value,decision:el('decision').value,reason:el('reason').value,confidence:+el('confidence').value};
+ const button=document.querySelector('[data-action="save"]');
+ let status=el('save-confirmation');
+ if(!status){status=document.createElement('p');status.id='save-confirmation';status.setAttribute('role','status');status.setAttribute('aria-live','polite');button?.insertAdjacentElement('afterend',status)}
+ if(button){button.disabled=true;button.textContent='Opslaan…'}
+ status.className='muted';status.textContent='Besluit wordt opgeslagen…';
+ try{
+  const result=await request('/api/team/decision',data);
+  if(result.success!==true)throw Error('De server heeft het opslaan niet bevestigd.');
+  // The Worker trims text on save. A later GET may also briefly return
+  // stale information; never present a confirmed POST as a failed save.
+  formDirty=false;pendingUpdate=false;
+  status.className='okay';status.textContent='✓ Besluit succesvol opgeslagen. Het is verzonden naar de docent.';
+  try{
+    const verified=await request('/api/team/state');
+    const saved=(verified.decisions||[]).find(d=>Number(d.round)===round);
+    const same=saved&&
+      String(saved.observations||'').trim()===data.observations.trim().slice(0,2500)&&
+      String(saved.decision||'').trim()===data.decision.trim().slice(0,2500)&&
+      String(saved.reason||'').trim()===data.reason.trim().slice(0,2500)&&
+      Number(saved.confidence)===data.confidence;
+    if(same){
+      state=verified;
+      status.textContent='✓ Besluit opgeslagen en gecontroleerd. Zichtbaar in de docentbediening.';
+    }
+  }catch(verificationError){
+    console.warn('Opslag bevestigd, terugleescontrole tijdelijk niet beschikbaar:',verificationError);
+  }
+  if(button)button.textContent='Besluit opnieuw opslaan';
+ }catch(err){status.className='bad';status.textContent='Opslaan mislukt: '+err.message;throw err}
+ finally{if(button)button.disabled=false}
+ return;
+}if(a==='init'){await request('/api/admin/init',{});return refresh()}if(a.startsWith('round:')){const n=+a.split(':')[1];if(confirm('Alle MT’s naar '+phases[n]+'?')){await request('/api/admin/advance',{round:n});return refresh()}return}if(a.startsWith('answer:')){
+ const id=+a.split(':')[1];
+ const field=el('answer-'+id);
+ const answer=field?.value.trim()||'';
+ if(!answer){alert('Vul eerst een antwoord in.');return}
+ const button=document.querySelector('[data-action="answer:'+id+'"]');
+ if(button){button.disabled=true;button.textContent='Verzenden…'}
+ try{
+   await request('/api/admin/answer',{id,answer});
+   const verified=await request('/api/admin/state');
+   const saved=(verified.questions||[]).find(q=>q.id===id);
+   if(!saved||saved.answer!==answer)throw Error('Opslag kon niet worden bevestigd. Controleer de docentbediening.');
+   delete draftAnswers[id];
+   lastSentAnswerId=id;
+   state=verified;
+   formDirty=Object.keys(draftAnswers).length>0;
+   pendingUpdate=false;
+   render();
+ }catch(error){
+   if(button){button.disabled=false;button.textContent='Opnieuw verzenden'}
+   throw error;
+ }
+ return
+}if(a==='reveal'){await request('/api/admin/reveal',{});return refresh()}if(a==='reset'){
+ if(!confirm('Deze reset verwijdert alle teamcodes, informatievragen, antwoorden en besluiten. Doorgaan?'))return;
+ if(!confirm('Weet je zeker dat je de sessie definitief wilt resetten?'))return;
+ await request('/api/admin/reset',{});
+ // After reset the API correctly returns 404 for /api/admin/state.
+ // Show the new-session view instead of swallowing that 404 in refresh().
+ for(const id of Object.keys(draftAnswers))delete draftAnswers[id];
+ lastSentAnswerId=null;
+ formDirty=false;
+ pendingUpdate=false;
+ selectedDoc=null;
+ state={uninitialized:true};
+ render();
+ return;
+}if(a==='refresh')return refresh();}catch(e){alert(e.message)}}
+// Preserve drafts. Silent polling never rebuilds a dirty participant form.
+document.addEventListener('input',event=>{
+ if(el('screen').contains(event.target)&&
+   ['TEXTAREA','INPUT','SELECT'].includes(event.target.tagName)){
+   formDirty=true;
+   if(role==='admin'&&event.target.id.startsWith('answer-')){
+     draftAnswers[event.target.id.slice(7)]=event.target.value;
+   }
+ }
+});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(b)action(b.dataset.action)});el('join').onclick=()=>login('team');el('admin').onclick=()=>login('admin');
+</script><script src="../excel-export.js"></script></body></html>
