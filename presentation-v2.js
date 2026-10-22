@@ -8,6 +8,13 @@ const disclaimerPatterns=[
 ];
 function cleanText(text){
  let output=String(text||"");
+ // Existing fictitious source notes use 2027 K3 values as if they were current.
+ // Align visible reports to the time series: current = 2026 K4 (index 8).
+ output=output
+  .replace(/daalt in het laatste kwartaal tot 93,4%/gi,"daalt in 2026 K4 tot 94,9% (prognose 2027 K3: 93,4%)")
+  .replace(/in het laatste kwartaal bedraagt de gemeten gemiddelde extra vertraging in de casus 12,1 minuten/gi,"in 2026 K4 bedraagt de gemeten extra vertraging 10,5 minuten (prognose 2027 K3: 12,1 minuten)")
+  .replace(/42 VRI-storingen in het laatste kwartaal/gi,"36 VRI-storingen in 2026 K4 (prognose 2027 K3: 42)")
+  .replace(/beeldkwaliteit komt in de casus uit op 93,4%/gi,"beeldkwaliteit komt in 2026 K4 uit op 94,9% (prognose 2027 K3: 93,4%)");
  for(const p of disclaimerPatterns)output=output.replace(p,"");
  return output.replace(/Provincie Noord-Holland/gi,"de provincie")
   .replace(/\bPNH\b/g,"provincie")
@@ -87,6 +94,14 @@ function markTrendAsObservedAndForecast(root){
   legend.className="trend-legend";
   legend.style.cssText="display:flex;gap:14px;flex-wrap:wrap;font:12px system-ui;color:#52647a;margin:6px 0 10px";
   legend.innerHTML='<span><b style="color:#245a91">━━</b> Waargenomen t/m 2026 K4</span><span><b style="color:#245a91">┄┄</b> Prognose 2027</span><span><b style="color:#5ab3b2">▨</b> Indicatieve onzekerheidsband</span>';
+  const summary=[...chart.querySelectorAll("p")].find(p=>/Begin:/.test(p.textContent)&&/Eind:/.test(p.textContent));
+  if(summary){
+   const labels=[...svg.querySelectorAll("circle title")].map(x=>x.textContent);
+   const currentVal=labels[here]||"";
+   const match=currentVal.match(/:\\s*(.+)$/);
+   summary.innerHTML=summary.innerHTML.replace(/<strong>Eind:<\\/strong>/,"<strong>Prognose 2027 K3:</strong>");
+   if(match){const current=chart.ownerDocument.createElement("p");current.style.cssText="font-size:13px;font-weight:600;color:#284b70";current.textContent="Actueel (2026 K4): "+match[1];summary.before(current);}
+  }
   const chartTitle=chart.querySelector("h3");
   if(chartTitle)chartTitle.after(legend);
   else chart.prepend(legend);
