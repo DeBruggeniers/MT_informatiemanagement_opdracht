@@ -9,6 +9,7 @@
 
 <div class="grid"><div><label for="teamcode">Teamcode</label><input id="teamcode" autocomplete="off"><button id="join">Open MT-scherm</button></div><div><label for="secret">Docentgeheim</label><input id="secret" type="password"><button id="admin" class="secondary">Open docentbediening</button></div></div>
 <p id="message" class="bad" role="alert"></p></section><section id="screen" class="hidden"></section></main>
+<script src="presentation-v2.js"></script>
 <script>
 'use strict';
 const el=x=>document.getElementById(x),safe=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -95,10 +96,10 @@ function renderTeam(host){
  const dashReleased=dashAvailable.length>0;
  const newCount=supplements.filter(d=>d.round===r).length;
  const newDash=dashAvailable.some(d=>d.round===r)&&r<=3;
- let h='<section class="card mt-hero"><div class="mt-hero-top"><div><div class="mt-eyebrow">◈ &nbsp; Provinciaal Beheer & Uitvoering</div><h1>Managementteam '+safe(({A:1,B:2,C:3,D:4})[s.team]||s.team)+'</h1><p>Jullie sturen op de assetmanagementdoelstellingen van een fictieve beheerorganisatie.</p></div><div class="mt-round-tag">'+safe(phases[r])+'</div></div>'+steps(r);
+ let h='<section class="card mt-hero"><div class="mt-hero-top"><div><div class="mt-eyebrow">◈ &nbsp; Provinciaal Beheer & Uitvoering</div><h1>Managementteam '+safe(({A:1,B:2,C:3,D:4})[s.team]||s.team)+'</h1></div><div class="mt-round-tag">'+safe(phases[r])+'</div></div>'+steps(r);
  if(r===0)h+='<div class="note">De eerste informatieronde wordt door de opleider gestart.</div>';
- if(r>0)h+='</section><nav class="mt-nav" aria-label="Onderdelen"><a href="#doelen"><span class="nav-dot"></span>Doelstellingen</a>'+(integrated?'<a href="#dashboard"><span class="nav-dot"></span>Dashboard</a>':'')+'<a href="#documenten"><span class="nav-dot"></span>Informatiedossier</a><a href="#informatievragen"><span class="nav-dot"></span>Informatievragen</a><a href="#besluiten"><span class="nav-dot"></span>Besluiten</a></nav><section class="card mt-goals" id="doelen"><h2 class="mt-section-title">Assetmanagementdoelstellingen</h2><ul>'+(s.samp||[]).map(x=>'<li>'+safe(x)+'</li>').join('')+'</ul>';
- if(s.revealed)h+='<div class="note"><strong>Onthulling:</strong> alle managementteams bestuurden dezelfde fictieve organisatie en kregen verschillende informatie.</div>';
+ if(r>0)h+='</section><nav class="mt-nav" aria-label="Onderdelen"><a href="#doelen"><span class="nav-dot"></span>Doelstellingen</a>'+(integrated?'<a href="#dashboard"><span class="nav-dot"></span>Dashboard</a>':'')+'<a href="#documenten"><span class="nav-dot"></span>Informatiedossier</a><a href="#informatievragen"><span class="nav-dot"></span>Informatievragen</a><a href="#besluiten"><span class="nav-dot"></span>Besluiten</a></nav><section class="card mt-goals" id="doelen"><h2 class="mt-section-title">Assetmanagementdoelstellingen</h2><ul>'+(s.samp||[]).map(x=>'<li>'+safe(window.MTPresentation.goal(x))+'</li>').join('')+'</ul>';
+ if(s.revealed)h+='<div class="note"><strong>Onthulling:</strong> alle managementteams bestuurden dezelfde organisatie en kregen verschillende informatie.</div>';
  h+='</section>';
  if(r>0){
   if(integrated){
@@ -151,6 +152,7 @@ async function loadDashboard(documents){
     const parsed=new DOMParser().parseFromString(p.html,'text/html');
     const article=parsed.querySelector('article');
     if(!article)throw Error('Dashboardonderdeel ontbreekt.');
+    window.MTPresentation.transformArticle(article,{charts:true});
     const header=article.querySelector('header');
     if(header)header.remove();
     const note=article.querySelector('p');
@@ -160,7 +162,7 @@ async function loadDashboard(documents){
   const combined='<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'+
   '<style>body{background:#f5f8fc;color:#233147;font:15px system-ui,Arial;margin:0;padding:12px} nav{display:flex;gap:8px;flex-wrap:wrap;position:sticky;top:0;background:#f5f8fc;padding:8px 0;z-index:2} nav a{color:#174f82;background:#dcecf9;padding:8px 12px;text-decoration:none;border-radius:6px;font-weight:600}.module{background:white;border:1px solid #dce3ec;border-radius:10px;padding:16px;margin:14px 0}section.chart{box-shadow:none}.module h2{font-size:19px}table{width:100%;border-collapse:collapse}td,th{padding:8px;border:1px solid #d5dce6}@media(max-width:720px){.module{padding:8px}}</style></head><body>'+
   '<nav>'+parts.map((p,i)=>'<a href="#onderdeel-'+i+'">'+safe(i===0?'Kernoverzicht':(state.team==='C'?'Ontwikkelvermogen':'Interventieafweging'))+'</a>').join('')+'</nav>'+
-  '<p style="font-size:12px;color:#687b91">Fictieve oefengegevens – geen werkelijke PNH-prestaties.</p>'+sections+'</body></html>';
+  sections+'</body></html>';
   const iframe=document.createElement('iframe');
   iframe.title='Managementdashboard';
   iframe.sandbox='allow-scripts';
@@ -175,7 +177,7 @@ function renderAdmin(host){if(state.uninitialized){host.innerHTML='<section clas
 '<div class="comparison-scroll"><table class="comparison-table"><thead><tr><th scope="col">Ronde</th>'+['1','2','3','4'].map(n=>'<th scope="col">MT '+n+'</th>').join('')+'</tr></thead><tbody id="decision-rows">'+
 renderDecisionRows(s.decisions||[])+
 '</tbody></table></div><p class="muted">De Excel-export bevat alle rondes en alle ingevulde velden, ook wanneer ze hier zijn ingeklapt.</p>'+btn('Exporteer resultaten naar Excel (.xlsx)','export-excel','secondary')+'</section>';if(s.round===4)h+='<section class="card"><h2>Gezamenlijke onthulling</h2><p>Verzamel eerst de besluiten van alle MT’s en bespreek daarna de gedeelde werkelijkheid.</p>'+btn('Onthul gedeelde werkelijkheid','reveal')+'</section>';host.innerHTML=h;const tableRows=el('decision-rows');if(tableRows)tableRows.dataset.signature=JSON.stringify(s.decisions||[])}
-async function loadDoc(id){selectedDoc=id;const box=el('viewer');if(!box)return;box.textContent='Document laden…';try{const d=await request('/api/team/document?id='+encodeURIComponent(id));if(d.type==='html'){const frame=document.createElement('iframe');frame.sandbox='allow-scripts';frame.srcdoc=d.body;box.replaceChildren(frame)}else{box.innerHTML=d.body}}catch(e){box.textContent=e.message}}
+async function loadDoc(id){selectedDoc=id;const box=el('viewer');if(!box)return;box.textContent='Document laden…';try{const d=await request('/api/team/document?id='+encodeURIComponent(id));if(d.type==='html'){const frame=document.createElement('iframe');frame.sandbox='allow-scripts';frame.srcdoc=window.MTPresentation.transformDocument(d.body);box.replaceChildren(frame)}else{box.innerHTML=window.MTPresentation.transformDocument(d.body)}}catch(e){box.textContent=e.message}}
 async function action(a){try{if(a==='apply-update'){if(role==='team'&&formDirty&&!confirm('Niet-opgeslagen invoer gaat verloren. Toch bijwerken?'))return;if(role==='team')formDirty=false;pendingUpdate=false;render();return}if(a==='expand-all'||a==='collapse-all'){
  document.querySelectorAll('.decision-fold').forEach(item=>item.open=(a==='expand-all'));
  return;
