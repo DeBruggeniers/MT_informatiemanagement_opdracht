@@ -98,8 +98,9 @@ function markTrendAsObservedAndForecast(root){
   if(summary){
    const labels=[...svg.querySelectorAll("circle title")].map(x=>x.textContent);
    const currentVal=labels[here]||"";
-   const match=currentVal.match(/:\\s*(.+)$/);
-   summary.innerHTML=summary.innerHTML.replace(/<strong>Eind:<\\/strong>/,"<strong>Prognose 2027 K3:</strong>");
+   const colon=currentVal.indexOf(':');
+   const match=colon>=0?[null,currentVal.slice(colon+1).trim()]:null;
+   summary.innerHTML=summary.innerHTML.replace("<strong>Eind:</strong>","<strong>Prognose 2027 K3:</strong>");
    if(match){const current=chart.ownerDocument.createElement("p");current.style.cssText="font-size:13px;font-weight:600;color:#284b70";current.textContent="Actueel (2026 K4): "+match[1];summary.before(current);}
   }
   const chartTitle=chart.querySelector("h3");
