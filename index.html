@@ -15,6 +15,8 @@
 const el=x=>document.getElementById(x),safe=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const phases=['Wachten op start','Ronde 1 – Signaleren','Ronde 2 – Verklaren','Ronde 3 – Besluiten','Eindresultaat'];
 let role='',credential='',state=null,selectedDoc=null,poll=null;
+ let dashboardOpen=false;
+ let dashboardActivePart=0;
 const root=()=> 'https://mt-informatiemanagement.koen-f98.workers.dev';
 async function request(path,payload){const headers={'Content-Type':'application/json'};if(role==='admin')headers.Authorization='Bearer '+credential;else headers['x-team-code']=credential;const response=await fetch(root()+path,{method:payload===undefined?'GET':'POST',headers,body:payload===undefined?undefined:JSON.stringify(payload),cache:'no-store'});const data=await response.json();if(!response.ok)throw Error(data.error||'Verbindingsfout');return data}
 const steps=n=>'<div class="steps">'+phases.map((p,i)=>'<span class="'+(n===i?'current':n>i?'past':'')+'">'+safe(p)+'</span>').join('')+'</div>';
@@ -105,7 +107,7 @@ function renderTeam(host){
   if(integrated){
    h+='<section class="card mt-dashboard-card" id="dashboard"><div class="panel-heading"><div><h2 class="mt-section-title">Managementdashboard</h2><p class="muted">Eén samenhangend overzicht. Nieuwe onderdelen verschijnen zodra de volgende informatieronde is vrijgegeven.</p></div>'+(newDash?'<span class="new-label">Nieuw</span>':'')+'</div>';
    if(dashReleased){
-    h+='<div class="dash-toolbar"><span>'+safe(s.team==='C'?'Middelen en ontwikkeling':'Integrale doelsturing')+'</span>'+btn('Dashboard openen','dashboard','secondary')+'</div><div id="dashboard-host" class="dashboard-host"><div class="muted">Open het dashboard om alle vrijgegeven onderdelen samen te bekijken.</div></div>';
+    h+='<div class="dash-toolbar"><span>'+safe(s.team==='C'?'Middelen en ontwikkeling':'Integrale doelsturing')+'</span>'+btn(dashboardOpen?'Dashboard sluiten':'Dashboard openen','dashboard','secondary')+'</div><div id="dashboard-host" class="dashboard-host" style="display:'+(dashboardOpen?'block':'none')+'"><div class="muted">Open het dashboard om alle vrijgegeven onderdelen samen te bekijken.</div></div>';
    }else{
     h+='<div class="note">Het managementdashboard wordt in een volgende informatieronde beschikbaar gesteld.</div>';
    }
@@ -132,7 +134,7 @@ function renderTeam(host){
   h+='<h2>Eerdere besluiten</h2>'+(s.decisions||[]).map(d=>'<div class="doc"><b>Ronde '+safe(d.round)+'</b><p>'+safe(d.decision)+'</p></div>').join('')+'</section></div>';
  }
  host.innerHTML=h;
- if(integrated&&dashReleased)loadDashboard(dashAvailable);
+ if(integrated&&dashReleased&&dashboardOpen)loadDashboard(dashAvailable);
 }
 async function loadDashboard(documents){
  const target=el('dashboard-host');
@@ -167,15 +169,31 @@ async function loadDashboard(documents){
    while(article.firstChild)module.appendChild(article.firstChild);
    const link=document.createElement('a');
    link.href='#dashboard-onderdeel-'+i;
+   link.dataset.dashboardPart=String(i);
    link.textContent=i===0?'Kernoverzicht':(state.team==='C'?'Ontwikkelvermogen':'Interventieafweging');
    link.style.cssText='color:#174f82;background:#dcecf9;padding:8px 12px;text-decoration:none;border-radius:6px;font-weight:600';
    nav.appendChild(link);
    return module;
   });
   target.replaceChildren(nav,...modules);
+  selectDashboardPart(dashboardActivePart);
  }catch(e){
   if(target.isConnected)target.textContent='Dashboard kon niet worden geladen: '+e.message;
  }
+}
+function selectDashboardPart(index){
+ const target=el('dashboard-host');
+ if(!target)return;
+ const modules=[...target.querySelectorAll('.dashboard-module')];
+ if(!modules.length)return;
+ dashboardActivePart=Math.max(0,Math.min(index,modules.length-1));
+ modules.forEach((m,i)=>{m.style.display=i===dashboardActivePart?'block':'none';});
+ target.querySelectorAll('[data-dashboard-part]').forEach(a=>{
+  const active=Number(a.dataset.dashboardPart)===dashboardActivePart;
+  a.style.background=active?'#174f82':'#dcecf9';
+  a.style.color=active?'white':'#174f82';
+  if(active)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');
+ });
 }
 function renderAdmin(host){if(state.uninitialized){host.innerHTML='<section class="card"><h1>Docentbediening</h1><p>Er is nog geen sessie. Start een nieuwe oefening en deel daarna de teamcodes uit.</p>'+btn('Nieuwe sessie starten','init')+'</section>';return}const s=state;let h='<section class="card"><h1>Docentbediening</h1>'+steps(s.round)+'<h2>'+safe(phases[s.round])+'</h2>'+[1,2,3,4].map(n=>'<button '+(n<=s.round?'disabled':'')+' data-action="round:'+n+'">'+(n===4?'Naar eindresultaat':'Start ronde '+n)+'</button>').join('')+btn('Vernieuwen','refresh','secondary')+btn('Reset sessie','reset','danger')+'</section><section class="card"><h2>Teamcodes</h2><div class="grid">'+(s.codes||[]).map(c=>'<div class="doc"><strong>MT '+safe(({A:1,B:2,C:3,D:4})[c.team]||c.team)+'</strong><p><code>'+safe(c.code)+'</code></p></div>').join('')+'</div></section>';h+='<section class="card"><h2>Informatievragen</h2>'+(s.questions||[]).map(q=>'<div class="doc"><strong>MT '+safe(({A:1,B:2,C:3,D:4})[q.team]||q.team)+' · ronde '+safe(q.round)+'</strong><p>'+safe(q.question)+'</p><label>Antwoord</label><textarea id="answer-'+q.id+'">'+safe(Object.prototype.hasOwnProperty.call(draftAnswers,q.id)?draftAnswers[q.id]:(q.answer||''))+'</textarea>'+(q.answer?'<p class="okay" role="status">✓ Antwoord verzonden naar MT '+safe(({A:1,B:2,C:3,D:4})[q.team]||q.team)+(lastSentAnswerId===q.id?' – zojuist bevestigd':'')+'</p><div class="doc"><strong>Verzonden antwoord</strong><p>'+safe(q.answer)+'</p></div>':'<p class="muted">Nog geen antwoord verzonden.</p>')+btn(q.answer?'Antwoord bijwerken':'Verstuur antwoord','answer:'+q.id)+'</div>').join('')+'</section>';h+='<section class="card"><div class="decisions-header"><div><h2>Besluiten per MT en ronde</h2><p class="muted">Elke ronde staat op dezelfde hoogte voor alle managementteams. Klik op een cel voor de volledige registratie.</p></div><div class="decisions-actions">'+btn('Alles uitklappen','expand-all','secondary')+btn('Alles inklappen','collapse-all','secondary')+'</div></div>'+
 '<div class="comparison-scroll"><table class="comparison-table"><thead><tr><th scope="col">Ronde</th>'+['1','2','3','4'].map(n=>'<th scope="col">MT '+n+'</th>').join('')+'</tr></thead><tbody id="decision-rows">'+
@@ -186,7 +204,19 @@ async function action(a){try{if(a==='apply-update'){if(role==='team'&&formDirty&
  document.querySelectorAll('.decision-fold').forEach(item=>item.open=(a==='expand-all'));
  return;
 }if(a==='export-excel'){const latest=await request('/api/admin/state');await window.exportMTExcel(latest);return}
-if(a==='dashboard'){const host=el('dashboard-host');if(host)host.scrollIntoView({behavior:'smooth',block:'start'});return}if(a.startsWith('doc:'))return loadDoc(a.slice(4));if(a==='ask'){await request('/api/team/ask',{question:el('question').value});formDirty=false;pendingUpdate=false;return refresh()}if(a==='save'){
+if(a==='dashboard'){
+  dashboardOpen=!dashboardOpen;
+  const host=el('dashboard-host');
+  const button=document.querySelector('[data-action="dashboard"]');
+  if(host)host.style.display=dashboardOpen?'block':'none';
+  if(button)button.textContent=dashboardOpen?'Dashboard sluiten':'Dashboard openen';
+  if(dashboardOpen){
+   const ids=state.team==='C'?['c21','c32']:['d21','d31'];
+   await loadDashboard((state.documents||[]).filter(d=>ids.includes(d.id)));
+   host?.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  return;
+ }if(a.startsWith('doc:'))return loadDoc(a.slice(4));if(a==='ask'){await request('/api/team/ask',{question:el('question').value});formDirty=false;pendingUpdate=false;return refresh()}if(a==='save'){
  const round=state.round;
  const data={observations:el('observations').value,decision:el('decision').value,reason:el('reason').value,confidence:+el('confidence').value};
  const button=document.querySelector('[data-action="save"]');
@@ -258,7 +288,13 @@ if(a==='dashboard'){const host=el('dashboard-host');if(host)host.scrollIntoView(
  render();
  return;
 }if(a==='refresh')return refresh();}catch(e){alert(e.message)}}
-// Preserve drafts. Silent polling never rebuilds a dirty participant form.
+document.addEventListener('click',event=>{
+ const link=event.target.closest('[data-dashboard-part]');
+ if(!link)return;
+ event.preventDefault();
+ selectDashboardPart(Number(link.dataset.dashboardPart));
+});
+ // Preserve drafts. Silent polling never rebuilds a dirty participant form.
 document.addEventListener('input',event=>{
  if(el('screen').contains(event.target)&&
    ['TEXTAREA','INPUT','SELECT'].includes(event.target.tagName)){
