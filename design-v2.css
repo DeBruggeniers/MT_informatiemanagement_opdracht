@@ -112,3 +112,9 @@ label{margin-top:17px!important;margin-bottom:8px!important;color:#334767;font-w
 @media(max-width:900px){
  .mt-trends-grid{grid-template-columns:minmax(0,1fr)}
 }
+
+/* MT3: financial dashboard four SVG charts in responsive two-column layout. */
+.dashboard-module:has(> .mt-trend-chart){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.dashboard-module:has(> .mt-trend-chart)>:not(.mt-trend-chart){grid-column:1/-1}
+.dashboard-module:has(> .mt-trend-chart)> .mt-trend-chart{min-width:0;margin:0!important}
+@media(max-width:900px){.dashboard-module:has(> .mt-trend-chart){grid-template-columns:minmax(0,1fr)}}
