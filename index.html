@@ -138,37 +138,41 @@ async function loadDashboard(documents){
  const target=el('dashboard-host');
  if(!target||!documents.length)return;
  const key=documents.map(d=>d.id).join(',');
- // Cache one coherent dashboard per released set. Never reload it on a timer.
  if(target.dataset.dashboardKey===key)return;
  target.dataset.dashboardKey=key;
  target.innerHTML='<p class="muted">Dashboard wordt geladen…</p>';
  try{
   const parts=await Promise.all(documents.map(async d=>{
-    const result=await request('/api/team/document?id='+encodeURIComponent(d.id));
-    return {title:d.title,html:result.body};
+   const result=await request('/api/team/document?id='+encodeURIComponent(d.id));
+   return {title:d.title,html:result.body};
   }));
   if(!target.isConnected)return;
-  const sections=parts.map((p,i)=>{
-    const parsed=new DOMParser().parseFromString(p.html,'text/html');
-    const article=parsed.querySelector('article');
-    if(!article)throw Error('Dashboardonderdeel ontbreekt.');
-    window.MTPresentation.transformArticle(article,{charts:true});
-    const header=article.querySelector('header');
-    if(header)header.remove();
-    const note=article.querySelector('p');
-    if(note&&note.textContent.includes('Fictieve oefengegevens'))note.remove();
-    return '<section class="module" id="onderdeel-'+i+'">'+article.innerHTML+'</section>';
-  }).join('');
-  const combined='<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'+
-  '<style>body{background:#f5f8fc;color:#233147;font:15px system-ui,Arial;margin:0;padding:12px} nav{display:flex;gap:8px;flex-wrap:wrap;position:sticky;top:0;background:#f5f8fc;padding:8px 0;z-index:2} nav a{color:#174f82;background:#dcecf9;padding:8px 12px;text-decoration:none;border-radius:6px;font-weight:600}.module{background:white;border:1px solid #dce3ec;border-radius:10px;padding:16px;margin:14px 0}section.chart{box-shadow:none}.module h2{font-size:19px}table{width:100%;border-collapse:collapse}td,th{padding:8px;border:1px solid #d5dce6}@media(max-width:720px){.module{padding:8px}}</style></head><body>'+
-  '<nav>'+parts.map((p,i)=>'<a href="#onderdeel-'+i+'">'+safe(i===0?'Kernoverzicht':(state.team==='C'?'Ontwikkelvermogen':'Interventieafweging'))+'</a>').join('')+'</nav>'+
-  sections+'</body></html>';
-  const iframe=document.createElement('iframe');
-  iframe.title='Managementdashboard';
-  iframe.sandbox='allow-scripts';
-  iframe.style.cssText='width:100%;height:950px;max-height:none;border:0;border-radius:8px;background:#fff';
-  iframe.srcdoc=combined;
-  target.replaceChildren(iframe);
+  // Embed dashboard modules in the current page. Do not nest an iframe or load an application again.
+  const nav=document.createElement('nav');
+  nav.className='dashboard-module-nav';
+  nav.style.cssText='display:flex;gap:8px;flex-wrap:wrap;position:sticky;top:0;background:#f5f8fc;padding:8px 0;z-index:2';
+  const modules=parts.map((p,i)=>{
+   const parsed=new DOMParser().parseFromString(p.html,'text/html');
+   const article=parsed.querySelector('article');
+   if(!article)throw Error('Dashboardonderdeel ontbreekt.');
+   window.MTPresentation.transformArticle(article,{charts:true});
+   const header=article.querySelector('header');
+   if(header)header.remove();
+   const note=article.querySelector('p');
+   if(note&&note.textContent.includes('Fictieve oefengegevens'))note.remove();
+   const module=document.createElement('section');
+   module.className='dashboard-module';
+   module.id='dashboard-onderdeel-'+i;
+   module.style.cssText='background:white;border:1px solid #dce3ec;border-radius:10px;padding:16px;margin:14px 0;overflow-x:auto';
+   while(article.firstChild)module.appendChild(article.firstChild);
+   const link=document.createElement('a');
+   link.href='#dashboard-onderdeel-'+i;
+   link.textContent=i===0?'Kernoverzicht':(state.team==='C'?'Ontwikkelvermogen':'Interventieafweging');
+   link.style.cssText='color:#174f82;background:#dcecf9;padding:8px 12px;text-decoration:none;border-radius:6px;font-weight:600';
+   nav.appendChild(link);
+   return module;
+  });
+  target.replaceChildren(nav,...modules);
  }catch(e){
   if(target.isConnected)target.textContent='Dashboard kon niet worden geladen: '+e.message;
  }
