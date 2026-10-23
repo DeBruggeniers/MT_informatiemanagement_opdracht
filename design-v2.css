@@ -78,3 +78,37 @@ label{margin-top:17px!important;margin-bottom:8px!important;color:#334767;font-w
 #save-confirmation.bad{display:block;color:#a22e37;background:#fff0f0;padding:11px 15px;border-radius:9px}
 @media(max-width:860px){main{padding:0 12px!important}.split{display:grid;grid-template-columns:1fr!important}.mt-goals ul{grid-template-columns:1fr}.card{padding:18px!important}.mt-hero-top{flex-direction:column}.mt-round-tag{white-space:normal}#viewer article{padding:24px}#viewer article>header{margin:-24px -24px 20px!important}}
 @media(prefers-reduced-motion:reduce){button{transition:none!important}button:hover{transform:none!important}}
+
+
+/* MT4: vier SVG-trendgrafieken compact in twee kolommen, mobiel een kolom.
+   De bronwaarden, normlijnen en prognoses blijven onaangetast. */
+.mt-trends-grid{
+ display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ align-items:stretch;
+ gap:16px;
+ margin:16px 0 20px;
+}
+.mt-trends-grid .mt-trend-chart{
+ min-width:0;
+ margin:0!important;
+ padding:12px!important;
+ display:flex;
+ flex-direction:column;
+}
+.mt-trends-grid .mt-trend-chart svg{
+ width:100%!important;
+ height:auto!important;
+ max-width:100%;
+ display:block;
+ margin:auto 0;
+}
+.mt-trends-grid .mt-trend-chart h3{
+ line-height:1.35;
+}
+.mt-trends-grid .mt-trend-chart p:last-child{
+ margin-top:auto!important;
+}
+@media(max-width:900px){
+ .mt-trends-grid{grid-template-columns:minmax(0,1fr)}
+}
