@@ -24,7 +24,7 @@ function css(){if(document.getElementById('teacher-answer-style'))return;const s
 `;document.head.appendChild(s)}
 function prompt(q,team){
 const references=bank.filter(x=>x.team===team).map(x=>({...x,rank:relevance(q.question,x.question)})).sort((a,b)=>b.rank-a.rank).slice(0,4);
-return ['Je ondersteunt een docent bij de assetmanagementsimulatie MT aan het stuur.','Formuleer een feitelijk, bondig conceptantwoord van maximaal 120 woorden. Gebruik uitsluitend de opgegeven bronantwoorden. Geef geen ongevraagde oplossingen. Markeer niet-onderbouwde oorzaken als onbekend. De docent beoordeelt het concept zelf.', 'MT '+team+' vraagt: '+q.question, 'Relevante oefenbronnen:',...references.map((x,i)=>(i+1)+'. '+x.question+'\n'+x.answer+'\nStatus: '+x.status+'; bron: '+x.source)].join('\n\n')}
+return ['Je ondersteunt een docent bij de assetmanagementsimulatie MT aan het stuur in het ChatGPT-project Cursus Assetmanagement.','Formuleer een feitelijk, bondig conceptantwoord van maximaal 120 woorden. Gebruik de meegeleverde oefenbronnen en de relevante projectdocumenten, en vermeld wanneer gegevens ontbreken. Geef geen ongevraagde oplossingen. Verwar aannames of prognoses niet met vastgestelde feiten. De docent controleert het concept.', 'MT '+team+' vraagt: '+q.question, references.length?'Relevante oefenbronnen:':'Er is geen lokale antwoordenbank geladen. Gebruik uitsluitend het relevante scenario uit de projectcontext; verzin geen cijfers.',...references.map((x,i)=>(i+1)+'. '+x.question+'\n'+x.answer+'\nStatus: '+x.status+'; bron: '+x.source)].join('\n\n')}
 function panel(field){
 if(field.dataset.answerHelper)return;
 field.dataset.answerHelper='1';
@@ -42,7 +42,7 @@ function render(){
  if([...select.options].some(o=>o.value===keep)&&search.value)select.value=keep;
  const chosen=available()[Number(select.value)];
  preview.textContent=chosen?chosen.answer+'\n\nBewijsstatus: '+chosen.status+'\nBron: '+chosen.source:bank.length?'Geen passende vraag. Probeer een andere zoekterm.':'Laad eerst het privé JSON-bestand.';
- wrap.querySelector('.ta-use').disabled=!chosen;wrap.querySelector('.ta-ai').disabled=!q;
+ wrap.querySelector('.ta-use').disabled=!chosen;wrap.querySelector('.ta-ai').disabled=false;
 }
 file.addEventListener('change',async()=>{
  try{const o=JSON.parse(await file.files[0].text());if(!Array.isArray(o.items)||o.items.length!==80||[1,2,3,4].some(t=>o.items.filter(x=>x.team===t).length!==20)||o.items.some(x=>!x.question||!x.answer))throw Error('Onjuist formaat: verwacht 20 vragen en antwoorden per MT.');
@@ -52,7 +52,7 @@ file.addEventListener('change',async()=>{
 search.addEventListener('input',render);select.addEventListener('change',render);wrap.addEventListener('answer-bank-loaded',render);
 wrap.querySelector('.ta-use').addEventListener('click',()=>{const x=available()[Number(select.value)];if(!x)return;field.value=x.answer;field.dispatchEvent(new Event('input',{bubbles:true}));status.textContent='Concept overgenomen. Controleer de tekst en klik zelf op Verstuur antwoord.'});
 wrap.querySelector('.ta-ai').addEventListener('click',async()=>{
- const q=current();if(!q)return;
+ const q=current();if(!q){status.textContent='De informatievraag is niet gevonden. Vernieuw de docentomgeving.';return;}
  const message=prompt(q,team());
  // Open het venster rechtstreeks tijdens de klik om pop-upblokkering te voorkomen.
  const chat=window.open(CHAT_URL,'_blank','noopener,noreferrer');
