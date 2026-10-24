@@ -10,7 +10,7 @@ Status: **aanvullende fictieve oefenregistratie**, door de auteur toegevoegd ter
 | S02 | Drie samenlopende omleidingsdagen op Westelijke stadsring: twee keer overlap in de ochtendspits (07.30–09.00 uur) en eenmaal in de middagspits (15.30–17.00 uur). | Illustratieve planningslog; geen afzonderlijk gemeten vertraging per dag. Niet gelijkstellen aan de drie conflictverzoeken zonder dossierkoppeling. |
 | S03 | Havenbrug: 29 onverwachte storingsuren verdeeld over vier geregistreerde verstoringsepisodes. | Geen bevestigde uitsplitsing naar technische faalwijze of wachttijd per schip. |
 | S04 | Van 36 VRI-storingsmeldingen zijn er 9 geregistreerd op één druk kruispunt en 7 op een tweede druk kruispunt; 20 op de overige installaties. | Meldingen, niet unieke defecten. Namen, verkeersbelasting en oorzaken per kruispunt niet vastgesteld. |
-| S05 | Bij 4 van de 6 inspectiesignalen die niet tijdig een dossierhouder kregen, is in het administratieve log een overdracht tussen organisatieonderdelen geregistreerd. | Geen bewezen causaal verband tussen overdracht en termijnoverschrijding, degradatie of veiligheidsrisico. |
+| S05 | Bij 4 van de 6 inspectieresultaten die niet tijdig een dossierhouder kregen, is in het administratieve log een overdracht tussen organisatieonderdelen geregistreerd. | Geen bewezen causaal verband tussen overdracht en termijnoverschrijding, degradatie of veiligheidsrisico. |
 | S06 | In de steekproef van 20 afgesloten VRI-herstelwerkorders horen 6 werkorders bij installaties waarvoor eerder ook een storing geregistreerd was. | Andere steekproefpopulatie dan de 36 kwartaalmeldingen; geen bewezen identieke faalwijze of falende reparatie. |
 | S07 | Kwartaaluitgaven van € 304.000 in de deelportefeuille 2026 K4: € 178.000 correctief VRI-herstel en € 126.000 correctief herstel bij geselecteerde beweegbare kunstwerken. | Som € 304.000. Geen aansluiting als additionele kostenpost op de jaarprognose € 4,8 mln; geen bewezen kostendrijver per incident. |
 | S08 | Van de zeven openstaande procesverbeteracties vragen vier expliciet VRI- of kunstwerkspecialistische kennis: acties 7, 8, 10 en 11. | Afgeleid van het bestaande verbeterregister. Geen gevalideerde urencapaciteit of uitvoeringsplanning. |
@@ -19,7 +19,7 @@ Status: **aanvullende fictieve oefenregistratie**, door de auteur toegevoegd ter
 
 ## Geldende v6.5-feiten blijven ongewijzigd
 
-14 minuten extra reistijd bij een selectie geplande werken; 91% wegbeeldkwaliteit tegenover 95% doel; 92% beschikbaarheid kunstwerken tegenover 99,5% doel; 36 VRI-meldingen; 15/40 late inspectiesignalen; 6/28 planningsverzoeken met extra afstemming en drie feitelijke conflictperioden; 19/20 tijdig VRI-herstel; jaarprognose € 4,8 mln tegenover € 3,2 mln budget; herverdelingsruimte maximaal € 1,2 mln; 5 vacatures; 4/11 procesacties gereed. Alle 2027-waarden blijven prognoses.
+14 minuten extra reistijd bij een selectie geplande werken; 91% wegbeeldkwaliteit tegenover 95% doel; 92% beschikbaarheid kunstwerken tegenover 99,5% doel; 36 VRI-meldingen; 15/40 late inspectieresultaten; 6/28 planningsverzoeken met extra afstemming en drie feitelijke conflictperioden; 19/20 tijdig VRI-herstel; jaarprognose € 4,8 mln tegenover € 3,2 mln budget; herverdelingsruimte maximaal € 1,2 mln; 5 vacatures; 4/11 procesacties gereed. Alle 2027-waarden blijven prognoses.
 
 ## Antwoordbeleid
 
