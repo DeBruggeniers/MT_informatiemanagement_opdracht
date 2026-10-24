@@ -32,8 +32,8 @@ function prompt(q,team){
   'Geef precies twee onderdelen: (1) ANTWOORD AAN MT, maximaal 120 woorden, direct kopieerbaar naar de simulatie; (2) DOCENTCONTROLE, met bron, bewijsstatus en eventuele ontbrekende informatie. Houd onderdeel 2 buiten het antwoord aan het MT.',
   'LETTERLIJKE VRAAG MT '+team+' (ronde '+round+'): '+q.question,
   references.length?'RELEVANTE GEGEVENS UIT DE LOKALE ANTWOORDENBANK:':'Geen passende antwoordenbankvermelding meegegeven; controleer de projectbronnen en zeg expliciet wanneer de gegevens ontbreken.',
-  ...references.map((x,i)=>(i+1)+'. '+x.question+'\\nAntwoord: '+x.answer+'\\nBewijsstatus: '+x.status+'; bron: '+x.source)
- ].join('\\n\\n');
+  ...references.map((x,i)=>(i+1)+'. '+x.question+'\nAntwoord: '+x.answer+'\nBewijsstatus: '+x.status+'; bron: '+x.source)
+ ].join('\n\n');
 }
 function panel(field){
 if(field.dataset.answerHelper)return;
