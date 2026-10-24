@@ -5,12 +5,12 @@
 (()=>{
 'use strict';
 let bank=[],loaded='';
-const STORAGE_KEY='mt_docent_antwoordenbank_v65';
+const STORAGE_KEY='mt_docent_antwoordenbank_v65_expanded_317';
 // De bank blijft in deze browser en wordt nooit meegestuurd naar GitHub of de Worker.
 function validBank(o){
- return Array.isArray(o?.items)&&o.items.length===80&&
-  [1,2,3,4].every(t=>o.items.filter(x=>Number(x.team)===t).length===20)&&
-  o.items.every(x=>x.question&&x.answer);
+ return Array.isArray(o?.items)&&o.items.length>=200&&
+  [1,2,3,4].every(t=>o.items.some(x=>Number(x.team)===t))&&
+  o.items.every(x=>x.question&&x.answer&&Number.isInteger(Number(x.team))&&Number.isInteger(Number(x.round)));
 }
 function notifyBank(){document.querySelectorAll('.teacher-answer').forEach(p=>p.dispatchEvent(new Event('answer-bank-loaded')))}
 function restoreBank(){
@@ -19,7 +19,7 @@ function restoreBank(){
   if(!raw)return;
   const o=JSON.parse(raw);
   if(!validBank(o))return;
-  bank=o.items;loaded='Opgeslagen privé-antwoordenbank (v6.5)';
+  bank=o.items;loaded='Opgeslagen uitgebreide docentenantwoordenbank (v6.5)';
   notifyBank();
  }catch(e){console.warn('De lokale antwoordenbank kon niet worden hersteld.',e)}
 }
@@ -50,7 +50,9 @@ function css(){if(document.getElementById('teacher-answer-style'))return;const s
 `;document.head.appendChild(s)}
 function prompt(q,team){
  const round=Number(q.round)||'onbekend';
- const references=bank.filter(x=>x.team===team).map(x=>({...x,rank:relevance(q.question,x.question)})).filter(x=>x.rank>0).sort((a,b)=>b.rank-a.rank).slice(0,4);
+ const references=bank.filter(x=>Number(x.team)===team&&Number(x.round)<=round)
+  .map(x=>({...x,rank:relevance(q.question,x.question)+(Number(x.round)===round?0.5:0)}))
+  .filter(x=>x.rank>=2).sort((a,b)=>b.rank-a.rank).slice(0,4);
  return [
   'DOCENTASSISTENT | MT AAN HET STUUR | CURSUS ASSETMANAGEMENT',
   'Beantwoord de letterlijke informatievraag binnen de fictieve assetmanagementsimulatie v6.5. Gebruik uitsluitend de vastgelegde scenariogegevens, de beschikbare projectdocumenten en de hieronder meegegeven bronantwoorden. Verzin geen cijfers of oorzakelijke verbanden.',
@@ -66,33 +68,54 @@ if(field.dataset.answerHelper)return;
 field.dataset.answerHelper='1';
 const id=Number(field.id.slice(7));
 const wrap=document.createElement('div');wrap.className='teacher-answer';
-wrap.innerHTML='<h3>Docentassistent · antwoordenbank</h3><p>De privé-antwoordenbank wordt na één keer laden op dit apparaat bewaard. Het best passende standaardantwoord verschijnt automatisch; controleer altijd de inhoud voordat je verzendt.</p><input type="file" accept=".json,application/json" aria-label="Privé antwoordenbank laden"><input type="search" placeholder="Zoek in 20 antwoorden…" aria-label="Zoeken"><select aria-label="Passend antwoord selecteren"></select><div class="ta-preview">Laad eerst het privé JSON-bestand.</div><div class="ta-actions"><button type="button" class="ta-use">Antwoord overnemen</button><button type="button" class="secondary ta-ai">Vraag naar projectchat kopiëren</button></div><p class="ta-status" role="status"></p>';
+wrap.innerHTML='<h3>Docentassistent · antwoordenbank</h3><p>Laad één keer de uitgebreide privé-antwoordenbank (317 vragen). De beste overeenkomst voor dit MT en deze ronde verschijnt automatisch. Controleer vóór verzending altijd de inhoud en bewijsstatus.</p><p class="ta-load-state" role="status">Nog geen uitgebreide vragenbank geladen</p><input type="file" accept=".json,application/json" aria-label="Privé antwoordenbank laden"><input type="search" placeholder="Zoek in vragen van dit MT…" aria-label="Zoeken"><select aria-label="Passend antwoord selecteren"></select><div class="ta-preview">Laad eerst het privé JSON-bestand.</div><div class="ta-actions"><button type="button" class="ta-use">Antwoord overnemen</button><button type="button" class="secondary ta-ai">Vraag naar projectchat kopiëren</button></div><p class="ta-status" role="status"></p>';
 const [file,search,select]=[wrap.querySelector('input[type=file]'),wrap.querySelector('input[type=search]'),wrap.querySelector('select')];
 const preview=wrap.querySelector('.ta-preview'),status=wrap.querySelector('.ta-status');
-const current=()=>getQuestion(id),team=()=>teamNum[current()?.team],available=()=>bank.filter(x=>x.team===team());
+const current=()=>getQuestion(id),team=()=>teamNum[current()?.team],available=()=>bank.filter(x=>Number(x.team)===team()&&Number(x.round)<=Number(current()?.round||1));
 function render(){
- const q=current(),candidates=available().map((x,i)=>({x,i,n:relevance(search.value||q?.question,x.question)})).sort((a,b)=>b.n-a.n);
- const shown=search.value?candidates.filter(z=>z.n>0||norm(z.x.question).includes(norm(search.value))):candidates;
- const keep=select.value;select.replaceChildren();
- for(const z of shown){const option=document.createElement('option');option.value=String(z.i);option.textContent=z.x.question;select.appendChild(option)}
- if([...select.options].some(o=>o.value===keep)&&search.value)select.value=keep;
+ const q=current(), currentRound=Number(q?.round)||1;
+ const candidates=available().map((x,i)=>({
+   x,i,n:relevance(search.value||q?.question,x.question),
+   sameRound:Number(x.round)===currentRound,
+   priority:x.priority==='Hoog'?1:0
+ })).sort((a,b)=>b.n-a.n||Number(b.sameRound)-Number(a.sameRound)||b.priority-a.priority);
+ const query=norm(search.value).trim();
+ const shown=query?candidates.filter(z=>z.n>0||norm(z.x.question).includes(query)):candidates;
+ const previous=select.value;select.replaceChildren();
+ for(const z of shown){
+  const option=document.createElement('option');
+  option.value=String(z.i);
+  option.textContent='R'+z.x.round+' · '+z.x.question+' ['+(z.x.source_code||'bron')+']';
+  select.appendChild(option);
+ }
+ if(query&&[...select.options].some(o=>o.value===previous))select.value=previous;
  const chosen=select.options.length?available()[Number(select.value)]:null;
- preview.textContent=chosen?((!search.value&&candidates[0]?.n===0)?'Let op: geen duidelijke overeenkomst gevonden. Selecteer een ander antwoord of gebruik ChatGPT.\n\n':'')+chosen.answer+'\n\nBewijsstatus: '+chosen.status+'\nBron: '+chosen.source:bank.length?'Geen passende vraag. Probeer een andere zoekterm.':'Laad de privé-antwoordenbank eenmalig via het JSON-bestand.';
- wrap.querySelector('.ta-use').disabled=!chosen;wrap.querySelector('.ta-ai').disabled=false;
+ const match=!query&&shown.length?shown[0].n:0;
+ const uncertainty=chosen&&Number(chosen.round)<currentRound?'Bron uit eerdere informatieronde.\\n':'';
+ preview.textContent=chosen
+  ?(match<2&&!query?'LET OP: geen duidelijke vraagovereenkomst. Dit antwoord is slechts een suggestie; gebruik eventueel ChatGPT.\\n\\n':'')
+   +uncertainty+chosen.answer+'\\n\\nBewijsstatus: '+(chosen.status||'niet opgegeven')
+   +'\\nBron: '+(chosen.source||chosen.source_code||'onbekend')
+   +(chosen.note?'\\nDocentnotitie: '+chosen.note:'')
+  :bank.length?'Geen passende vraag. Probeer een andere zoekterm.':'Laad de uitgebreide privé-antwoordenbank eenmalig via het JSON-bestand.';
+ wrap.querySelector('.ta-use').disabled=!chosen||(match<2&&!query);
+ wrap.querySelector('.ta-ai').disabled=false;
+ const label=wrap.querySelector('.ta-load-state');
+ if(label)label.textContent=bank.length?bank.length+' vragen geladen · '+available().length+' voor dit MT t/m ronde '+currentRound:'Nog geen uitgebreide vragenbank geladen';
 }
 file.addEventListener('change',async()=>{
  try{
   const selected=file.files?.[0];if(!selected)return;
   const raw=await selected.text(),o=JSON.parse(raw);
-  if(!validBank(o))throw Error('Onjuist formaat: verwacht 20 vragen en antwoorden per MT.');
+  if(!validBank(o))throw Error('Onjuist formaat: verwacht de uitgebreide docentenvragenbank met minimaal 200 vragen en geldige MT- en rondegegevens.');
   bank=o.items;loaded=selected.name;
-  try{localStorage.setItem(STORAGE_KEY,raw);status.textContent='80 antwoorden opgeslagen in deze browser. Voortaan automatisch beschikbaar.'}
-  catch{status.textContent='80 antwoorden geladen, maar lokaal opslaan is geblokkeerd. Volgende keer opnieuw laden.'}
+  try{localStorage.setItem(STORAGE_KEY,raw);status.textContent=bank.length+' vragen opgeslagen in deze browser. Voortaan automatisch beschikbaar.'}
+  catch{status.textContent=bank.length+' vragen geladen, maar lokaal opslaan is geblokkeerd. Volgende keer opnieuw laden.'}
   notifyBank();
  }catch(e){status.textContent='Importeren mislukt: '+e.message}
 });
 search.addEventListener('input',render);select.addEventListener('change',render);wrap.addEventListener('answer-bank-loaded',render);
-wrap.querySelector('.ta-use').addEventListener('click',()=>{const x=select.options.length?available()[Number(select.value)]:null;if(!x)return;field.value=x.answer;field.dispatchEvent(new Event('input',{bubbles:true}));status.textContent='Concept overgenomen. Controleer de tekst en klik zelf op Verstuur antwoord.'});
+wrap.querySelector('.ta-use').addEventListener('click',()=>{const x=select.options.length?available()[Number(select.value)]:null;if(!x||wrap.querySelector('.ta-use').disabled)return;field.value=x.answer;field.dispatchEvent(new Event('input',{bubbles:true}));status.textContent='Concept overgenomen. Controleer de tekst en klik zelf op Verstuur antwoord.'});
 function manualPrompt(message){
  let area=wrap.querySelector('.ta-manual-prompt');
  if(!area){
