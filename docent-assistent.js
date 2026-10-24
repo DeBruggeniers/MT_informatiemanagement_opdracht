@@ -76,7 +76,7 @@ function render(){
  const keep=select.value;select.replaceChildren();
  for(const z of shown){const option=document.createElement('option');option.value=String(z.i);option.textContent=z.x.question;select.appendChild(option)}
  if([...select.options].some(o=>o.value===keep)&&search.value)select.value=keep;
- const chosen=available()[Number(select.value)];
+ const chosen=select.options.length?available()[Number(select.value)]:null;
  preview.textContent=chosen?((!search.value&&candidates[0]?.n===0)?'Let op: geen duidelijke overeenkomst gevonden. Selecteer een ander antwoord of gebruik ChatGPT.\n\n':'')+chosen.answer+'\n\nBewijsstatus: '+chosen.status+'\nBron: '+chosen.source:bank.length?'Geen passende vraag. Probeer een andere zoekterm.':'Laad de privé-antwoordenbank eenmalig via het JSON-bestand.';
  wrap.querySelector('.ta-use').disabled=!chosen;wrap.querySelector('.ta-ai').disabled=false;
 }
@@ -92,7 +92,7 @@ file.addEventListener('change',async()=>{
  }catch(e){status.textContent='Importeren mislukt: '+e.message}
 });
 search.addEventListener('input',render);select.addEventListener('change',render);wrap.addEventListener('answer-bank-loaded',render);
-wrap.querySelector('.ta-use').addEventListener('click',()=>{const x=available()[Number(select.value)];if(!x)return;field.value=x.answer;field.dispatchEvent(new Event('input',{bubbles:true}));status.textContent='Concept overgenomen. Controleer de tekst en klik zelf op Verstuur antwoord.'});
+wrap.querySelector('.ta-use').addEventListener('click',()=>{const x=select.options.length?available()[Number(select.value)]:null;if(!x)return;field.value=x.answer;field.dispatchEvent(new Event('input',{bubbles:true}));status.textContent='Concept overgenomen. Controleer de tekst en klik zelf op Verstuur antwoord.'});
 function manualPrompt(message){
  let area=wrap.querySelector('.ta-manual-prompt');
  if(!area){
