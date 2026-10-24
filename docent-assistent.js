@@ -75,7 +75,9 @@ const current=()=>getQuestion(id),team=()=>teamNum[current()?.team],available=()
 let manualChoice=null;
 function render(){
  const q=current(), currentRound=Number(q?.round)||1;
- const candidates=available().map((x,i)=>({
+ const recommended=available().some(x=>x.recommend===true);
+ const eligible=available().map((x,i)=>({x,i})).filter(z=>!recommended||Boolean(search.value.trim())||z.x.recommend===true);
+ const candidates=eligible.map(({x,i})=>({
    x,i,n:relevance(search.value||q?.question,x.question),
    sameRound:Number(x.round)===currentRound,
    priority:x.priority==='Hoog'?1:0
