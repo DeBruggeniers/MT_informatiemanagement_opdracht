@@ -6,7 +6,7 @@
 'use strict';
 let bank=[],loaded='';
 const teamNum={A:1,B:2,C:3,D:4};
-const CHAT_URL='https://chatgpt.com/g/g-p-6abf7a7750488191aa4d6d50ccc71a25-cursus-assetmanagement/c/6ad0d8a9-087c-83ed-81de-faa255719706';
+const CHAT_URL='https://chatgpt.com/g/g-p-6abf7a7750488191aa4d6d50ccc71a25-cursus-assetmanagement/c/6adcc685-328c-83eb-9e09-1acb86802803';
 const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ');
 const terms=s=>new Set(norm(s).split(/\s+/).filter(w=>w.length>3&&!['welke','waarom','kunnen','worden','heeft','zijn','deze','voor','door','over'].includes(w)));
 function relevance(a,b){const x=terms(a),y=terms(b);let n=0;for(const t of x)if(y.has(t))n++;return n;}
@@ -23,8 +23,18 @@ function css(){if(document.getElementById('teacher-answer-style'))return;const s
 .teacher-answer .ta-status{font-size:12px;color:#245b77}
 `;document.head.appendChild(s)}
 function prompt(q,team){
-const references=bank.filter(x=>x.team===team).map(x=>({...x,rank:relevance(q.question,x.question)})).sort((a,b)=>b.rank-a.rank).slice(0,4);
-return ['Je ondersteunt een docent bij de assetmanagementsimulatie MT aan het stuur in het ChatGPT-project Cursus Assetmanagement.','Formuleer een feitelijk, bondig conceptantwoord van maximaal 120 woorden. Gebruik de meegeleverde oefenbronnen en de relevante projectdocumenten, en vermeld wanneer gegevens ontbreken. Geef geen ongevraagde oplossingen. Verwar aannames of prognoses niet met vastgestelde feiten. De docent controleert het concept.', 'MT '+team+' vraagt: '+q.question, references.length?'Relevante oefenbronnen:':'Er is geen lokale antwoordenbank geladen. Gebruik uitsluitend het relevante scenario uit de projectcontext; verzin geen cijfers.',...references.map((x,i)=>(i+1)+'. '+x.question+'\n'+x.answer+'\nStatus: '+x.status+'; bron: '+x.source)].join('\n\n')}
+ const round=Number(q.round)||'onbekend';
+ const references=bank.filter(x=>x.team===team).map(x=>({...x,rank:relevance(q.question,x.question)})).filter(x=>x.rank>0).sort((a,b)=>b.rank-a.rank).slice(0,4);
+ return [
+  'DOCENTASSISTENT | MT AAN HET STUUR | CURSUS ASSETMANAGEMENT',
+  'Beantwoord de letterlijke informatievraag binnen de fictieve assetmanagementsimulatie v6.5. Gebruik uitsluitend de vastgelegde scenariogegevens, de beschikbare projectdocumenten en de hieronder meegegeven bronantwoorden. Verzin geen cijfers of oorzakelijke verbanden.',
+  'Informatiepositie: MT '+team+'; informatieronde '+round+'. Beantwoord uitsluitend de gestelde vraag. Verstrek geen ongevraagde informatie uit andere MT-dossiers, geen volledige interventieafweging en geen hints naar de beste maatregel. Een gerichte vraag mag wel relevante achterliggende informatie opleveren, mits die in het scenario onderbouwd is.',
+  'Geef precies twee onderdelen: (1) ANTWOORD AAN MT, maximaal 120 woorden, direct kopieerbaar naar de simulatie; (2) DOCENTCONTROLE, met bron, bewijsstatus en eventuele ontbrekende informatie. Houd onderdeel 2 buiten het antwoord aan het MT.',
+  'LETTERLIJKE VRAAG MT '+team+' (ronde '+round+'): '+q.question,
+  references.length?'RELEVANTE GEGEVENS UIT DE LOKALE ANTWOORDENBANK:':'Geen passende antwoordenbankvermelding meegegeven; controleer de projectbronnen en zeg expliciet wanneer de gegevens ontbreken.',
+  ...references.map((x,i)=>(i+1)+'. '+x.question+'\\nAntwoord: '+x.answer+'\\nBewijsstatus: '+x.status+'; bron: '+x.source)
+ ].join('\\n\\n');
+}
 function panel(field){
 if(field.dataset.answerHelper)return;
 field.dataset.answerHelper='1';
