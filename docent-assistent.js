@@ -69,16 +69,15 @@ function css(){if(document.getElementById('teacher-answer-style'))return;const s
 function prompt(q,team){
  const round=Number(q.round)||'onbekend';
  const matching=bank.filter(x=>Number(x.team)===team&&Number(x.round)<=round);
- const preferred=matching.some(x=>x.recommend===true)?matching.filter(x=>x.recommend===true):matching;
- const references=preferred.map(x=>({...x,rank:relevance(q.question,x.question)+(Number(x.round)===round?0.5:0)}))
+ const references=matching.map(x=>({...x,rank:relevance(q.question,x.question)+(Number(x.round)===round?0.5:0)+(x.recommend?0.25:0)}))
   .filter(x=>x.rank>=2).sort((a,b)=>b.rank-a.rank).slice(0,4);
  return [
   'DOCENTASSISTENT | MT AAN HET STUUR | CURSUS ASSETMANAGEMENT',
-  'Beantwoord de letterlijke informatievraag binnen de fictieve assetmanagementsimulatie v6.5. Gebruik uitsluitend de vastgelegde scenariogegevens, de beschikbare projectdocumenten en de hieronder meegegeven bronantwoorden. Verzin geen cijfers of oorzakelijke verbanden.',
+  'Beantwoord de letterlijke informatievraag binnen de fictieve assetmanagementsimulatie v6.5 met expliciet toegevoegde oefenregistraties v6.6. Gebruik uitsluitend de vastgelegde scenariogegevens, de beschikbare projectdocumenten en de hieronder meegegeven bronantwoorden. Nieuwe cijfers met herkomst v6.6 zijn afgesproken fictieve oefenfeiten, geen oorspronkelijke v6.5-metingen. Verzin buiten deze bronnen geen nieuwe cijfers en claim geen onbewezen oorzakelijke verbanden.',
   'Informatiepositie: MT '+team+'; informatieronde '+round+'. Beantwoord uitsluitend de gestelde vraag. Verstrek geen ongevraagde informatie uit andere MT-dossiers, geen volledige interventieafweging en geen hints naar de beste maatregel. Een gerichte vraag mag wel relevante achterliggende informatie opleveren, mits die in het scenario onderbouwd is.',
   'Geef precies twee onderdelen: (1) ANTWOORD AAN MT, maximaal 120 woorden, direct kopieerbaar naar de simulatie; (2) DOCENTCONTROLE, met bron, bewijsstatus en eventuele ontbrekende informatie. Houd onderdeel 2 buiten het antwoord aan het MT.',
   'LETTERLIJKE VRAAG MT '+team+' (ronde '+round+'): '+q.question,
-  references.length?'RELEVANTE GEGEVENS UIT DE LOKALE ANTWOORDENBANK:':'Geen passende antwoordenbankvermelding meegegeven; controleer de projectbronnen en zeg expliciet wanneer de gegevens ontbreken.',
+  references.length?'RELEVANTE GEGEVENS UIT DE CENTRALE DOCENTANTWOORDENBANK:':'Geen passende antwoordenbankvermelding meegegeven; controleer de projectbronnen en zeg expliciet wanneer de gegevens ontbreken.',
   ...references.map((x,i)=>(i+1)+'. '+x.question+'\nAntwoord: '+x.answer+'\nBewijsstatus: '+x.status+'; bron: '+x.source)
  ].join('\n\n');
 }
