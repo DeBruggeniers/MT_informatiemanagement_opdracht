@@ -61,39 +61,63 @@ file.addEventListener('change',async()=>{
 });
 search.addEventListener('input',render);select.addEventListener('change',render);wrap.addEventListener('answer-bank-loaded',render);
 wrap.querySelector('.ta-use').addEventListener('click',()=>{const x=available()[Number(select.value)];if(!x)return;field.value=x.answer;field.dispatchEvent(new Event('input',{bubbles:true}));status.textContent='Concept overgenomen. Controleer de tekst en klik zelf op Verstuur antwoord.'});
-wrap.querySelector('.ta-ai').addEventListener('click',async()=>{
- const q=current();if(!q){status.textContent='De informatievraag is niet gevonden. Vernieuw de docentomgeving.';return;}
- const message=prompt(q,team());
- // Open het venster rechtstreeks tijdens de klik om pop-upblokkering te voorkomen.
- const chat=window.open(CHAT_URL,'_blank','noopener,noreferrer');
- let copied=false;
- try{
-  await navigator.clipboard.writeText(message);
-  copied=true;
- }catch(err){
-  // Clipboard may be restricted; provide a selectable fallback prompt.
-  const previous=wrap.querySelector('.ta-manual-prompt');
-  if(previous)previous.remove();
-  const area=document.createElement('textarea');
-  area.className='ta-manual-prompt';
-  area.rows=7;
-  area.readOnly=true;
-  area.value=message;
-  area.setAttribute('aria-label','Prompt voor de cursusprojectchat');
+function manualPrompt(message){
+ let area=wrap.querySelector('.ta-manual-prompt');
+ if(!area){
+  area=document.createElement('textarea');
+  area.className='ta-manual-prompt';area.rows=8;area.readOnly=true;
+  area.setAttribute('aria-label','De gegenereerde ChatGPT-prompt');
   wrap.appendChild(area);
-  area.select();
-  status.textContent='Automatisch kopiëren is geblokkeerd. Kopieer de geselecteerde tekst en plak deze in de projectchat.';
  }
- if(copied){
-  status.textContent=chat
-   ?'Vraag met scenario-informatie gekopieerd. Plak met Ctrl+V in de geopende projectchat en verzend.'
-   :'Vraag gekopieerd. Open de projectchat via de onderstaande link, plak met Ctrl+V en verzend.';
+ area.value=message;
+ let copy=wrap.querySelector('.ta-copy-prompt');
+ if(!copy){
+  copy=document.createElement('button');
+  copy.type='button';copy.className='secondary ta-copy-prompt';
+  copy.textContent='Kopieer de volledige prompt';
+  wrap.appendChild(copy);
+  copy.addEventListener('click',async()=>{
+   const text=area.value;
+   try{await navigator.clipboard.writeText(text);status.textContent='Prompt gekopieerd. Plak met Ctrl+V in de projectchat.'}
+   catch{
+    area.focus();area.select();
+    if(document.execCommand('copy'))status.textContent='Prompt gekopieerd. Plak met Ctrl+V in de projectchat.';
+    else status.textContent='Automatisch kopiëren is niet toegestaan. Selecteer de tekst hieronder en gebruik Ctrl+C.';
+   }
+  });
  }
+ return area;
+}
+wrap.querySelector('.ta-ai').addEventListener('click',()=>{
+ const q=current();
+ if(!q){status.textContent='De informatievraag is niet gevonden. Vernieuw de docentomgeving.';return;}
+ const message=prompt(q,team());
+ // Toon de volledige prompt altijd op de docentpagina als controleerbare fallback.
+ const area=manualPrompt(message);
+ // Clipboard request MUST start before navigating to ChatGPT.
+ // A synchronous fallback supports browsers that deny the modern Clipboard API.
+ let syncCopied=false;
+ try{
+  area.focus();area.select();
+  syncCopied=document.execCommand('copy');
+ }catch{}
+ const modernCopy=typeof navigator.clipboard?.writeText==='function'
+  ?navigator.clipboard.writeText(message).then(()=>{
+    status.textContent='Prompt gekopieerd. Plak deze met Ctrl+V in de geopende projectchat.';
+   }).catch(()=>{
+    status.textContent=syncCopied
+      ?'Prompt gekopieerd. Plak deze met Ctrl+V in de geopende projectchat.'
+      :'Kopiëren geblokkeerd. Ga terug naar dit venster en klik op Kopieer de volledige prompt.';
+   })
+  :null;
+ // Open the chat after initiating copy, without automatic sending.
+ const chat=window.open(CHAT_URL,'_blank');
  if(!chat){
   let link=wrap.querySelector('.ta-chat-link');
-  if(!link){link=document.createElement('a');link.className='ta-chat-link';link.target='_blank';link.rel='noopener noreferrer';link.textContent='Open ChatGPT-projectchat';wrap.appendChild(link);}
+  if(!link){link=document.createElement('a');link.className='ta-chat-link';link.target='_blank';link.rel='noopener noreferrer';link.textContent='Open ChatGPT-projectchat';wrap.appendChild(link)}
   link.href=CHAT_URL;
  }
+ status.textContent=syncCopied?'Prompt gekopieerd. Plak met Ctrl+V in de projectchat.':'Prompt klaargezet. Gebruik Ctrl+V in de projectchat; als dat niet lukt, klik op Kopieer de volledige prompt.';
 });
 field.insertAdjacentElement('afterend',wrap);render()
 }
