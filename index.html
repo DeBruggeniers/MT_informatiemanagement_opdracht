@@ -169,7 +169,7 @@ async function loadDashboard(documents){
    while(article.firstChild)module.appendChild(article.firstChild);
    // De SVG-trendgrafieken uit dossier d21 komen in een responsief 2x2 raster.
    // Alleen het MT4-Kernoverzicht bevat deze vier grafieken; de dossierinhoud blijft ongewijzigd.
-   if(state.team==='D'&&i===0){
+   if((state.team==='C'||state.team==='D')&&i===0){
     const trendCharts=[...module.querySelectorAll('.mt-trend-chart')];
     if(trendCharts.length===4){
      const grid=document.createElement('div');
