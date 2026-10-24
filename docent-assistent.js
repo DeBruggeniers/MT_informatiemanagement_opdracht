@@ -50,8 +50,9 @@ function css(){if(document.getElementById('teacher-answer-style'))return;const s
 `;document.head.appendChild(s)}
 function prompt(q,team){
  const round=Number(q.round)||'onbekend';
- const references=bank.filter(x=>Number(x.team)===team&&Number(x.round)<=round)
-  .map(x=>({...x,rank:relevance(q.question,x.question)+(Number(x.round)===round?0.5:0)}))
+ const matching=bank.filter(x=>Number(x.team)===team&&Number(x.round)<=round);
+ const preferred=matching.some(x=>x.recommend===true)?matching.filter(x=>x.recommend===true):matching;
+ const references=preferred.map(x=>({...x,rank:relevance(q.question,x.question)+(Number(x.round)===round?0.5:0)}))
   .filter(x=>x.rank>=2).sort((a,b)=>b.rank-a.rank).slice(0,4);
  return [
   'DOCENTASSISTENT | MT AAN HET STUUR | CURSUS ASSETMANAGEMENT',
@@ -68,7 +69,7 @@ if(field.dataset.answerHelper)return;
 field.dataset.answerHelper='1';
 const id=Number(field.id.slice(7));
 const wrap=document.createElement('div');wrap.className='teacher-answer';
-wrap.innerHTML='<h3>Docentassistent · antwoordenbank</h3><p>Laad één keer de uitgebreide privé-antwoordenbank (317 vragen). De beste overeenkomst voor dit MT en deze ronde verschijnt automatisch. Controleer vóór verzending altijd de inhoud en bewijsstatus.</p><p class="ta-load-state" role="status">Nog geen uitgebreide vragenbank geladen</p><input type="file" accept=".json,application/json" aria-label="Privé antwoordenbank laden"><input type="search" placeholder="Zoek in vragen van dit MT…" aria-label="Zoeken"><select aria-label="Passend antwoord selecteren"></select><div class="ta-preview">Laad eerst het privé JSON-bestand.</div><div class="ta-actions"><button type="button" class="ta-use">Antwoord overnemen</button><button type="button" class="secondary ta-ai">Vraag naar projectchat kopiëren</button></div><p class="ta-status" role="status"></p>';
+wrap.innerHTML='<h3>Docentassistent · antwoordenbank</h3><p>Laad één keer de privé-antwoordenbank met verdiepende vragen. Alleen vragen die extra, onderbouwde informatie opleveren worden automatisch voorgesteld; oudere naslag is doorzoekbaar. Controleer vóór verzending altijd de inhoud en bewijsstatus.</p><p class="ta-load-state" role="status">Nog geen uitgebreide vragenbank geladen</p><input type="file" accept=".json,application/json" aria-label="Privé antwoordenbank laden"><input type="search" placeholder="Zoek extra informatie of eerdere naslag…" aria-label="Zoeken"><select aria-label="Passend antwoord selecteren"></select><div class="ta-preview">Laad eerst het privé JSON-bestand.</div><div class="ta-actions"><button type="button" class="ta-use">Antwoord overnemen</button><button type="button" class="secondary ta-ai">Vraag naar projectchat kopiëren</button></div><p class="ta-status" role="status"></p>';
 const [file,search,select]=[wrap.querySelector('input[type=file]'),wrap.querySelector('input[type=search]'),wrap.querySelector('select')];
 const preview=wrap.querySelector('.ta-preview'),status=wrap.querySelector('.ta-status');
 const current=()=>getQuestion(id),team=()=>teamNum[current()?.team],available=()=>bank.filter(x=>Number(x.team)===team()&&Number(x.round)<=Number(current()?.round||1));
