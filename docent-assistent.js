@@ -72,6 +72,7 @@ wrap.innerHTML='<h3>Docentassistent · antwoordenbank</h3><p>Laad één keer de 
 const [file,search,select]=[wrap.querySelector('input[type=file]'),wrap.querySelector('input[type=search]'),wrap.querySelector('select')];
 const preview=wrap.querySelector('.ta-preview'),status=wrap.querySelector('.ta-status');
 const current=()=>getQuestion(id),team=()=>teamNum[current()?.team],available=()=>bank.filter(x=>Number(x.team)===team()&&Number(x.round)<=Number(current()?.round||1));
+let manualChoice=null;
 function render(){
  const q=current(), currentRound=Number(q?.round)||1;
  const candidates=available().map((x,i)=>({
@@ -81,22 +82,22 @@ function render(){
  })).sort((a,b)=>b.n-a.n||Number(b.sameRound)-Number(a.sameRound)||b.priority-a.priority);
  const query=norm(search.value).trim();
  const shown=query?candidates.filter(z=>z.n>0||norm(z.x.question).includes(query)):candidates;
- const previous=select.value;select.replaceChildren();
+ select.replaceChildren();
  for(const z of shown){
   const option=document.createElement('option');
   option.value=String(z.i);
   option.textContent='R'+z.x.round+' · '+z.x.question+' ['+(z.x.source_code||'bron')+']';
   select.appendChild(option);
  }
- if(query&&[...select.options].some(o=>o.value===previous))select.value=previous;
+ if(manualChoice!==null&&[...select.options].some(o=>o.value===manualChoice))select.value=manualChoice;
  const chosen=select.options.length?available()[Number(select.value)]:null;
  const match=!query&&shown.length?shown[0].n:0;
- const uncertainty=chosen&&Number(chosen.round)<currentRound?'Bron uit eerdere informatieronde.\\n':'';
+ const uncertainty=chosen&&Number(chosen.round)<currentRound?'Bron uit eerdere informatieronde.\n':'';
  preview.textContent=chosen
-  ?(match<2&&!query?'LET OP: geen duidelijke vraagovereenkomst. Dit antwoord is slechts een suggestie; gebruik eventueel ChatGPT.\\n\\n':'')
-   +uncertainty+chosen.answer+'\\n\\nBewijsstatus: '+(chosen.status||'niet opgegeven')
-   +'\\nBron: '+(chosen.source||chosen.source_code||'onbekend')
-   +(chosen.note?'\\nDocentnotitie: '+chosen.note:'')
+  ?(match<2&&!query?'LET OP: geen duidelijke vraagovereenkomst. Dit antwoord is slechts een suggestie; gebruik eventueel ChatGPT.\n\n':'')
+   +uncertainty+chosen.answer+'\n\nBewijsstatus: '+(chosen.status||'niet opgegeven')
+   +'\nBron: '+(chosen.source||chosen.source_code||'onbekend')
+   +(chosen.note?'\nDocentnotitie: '+chosen.note:'')
   :bank.length?'Geen passende vraag. Probeer een andere zoekterm.':'Laad de uitgebreide privé-antwoordenbank eenmalig via het JSON-bestand.';
  wrap.querySelector('.ta-use').disabled=!chosen||(match<2&&!query);
  wrap.querySelector('.ta-ai').disabled=false;
@@ -114,7 +115,7 @@ file.addEventListener('change',async()=>{
   notifyBank();
  }catch(e){status.textContent='Importeren mislukt: '+e.message}
 });
-search.addEventListener('input',render);select.addEventListener('change',render);wrap.addEventListener('answer-bank-loaded',render);
+search.addEventListener('input',()=>{manualChoice=null;render()});select.addEventListener('change',()=>{manualChoice=select.value;render()});wrap.addEventListener('answer-bank-loaded',()=>{manualChoice=null;render()});
 wrap.querySelector('.ta-use').addEventListener('click',()=>{const x=select.options.length?available()[Number(select.value)]:null;if(!x||wrap.querySelector('.ta-use').disabled)return;field.value=x.answer;field.dispatchEvent(new Event('input',{bubbles:true}));status.textContent='Concept overgenomen. Controleer de tekst en klik zelf op Verstuur antwoord.'});
 function manualPrompt(message){
  let area=wrap.querySelector('.ta-manual-prompt');
