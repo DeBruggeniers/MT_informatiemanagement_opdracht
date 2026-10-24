@@ -6,6 +6,8 @@
 'use strict';
 let bank=[],loaded='';
 const STORAGE_KEY='mt_docent_antwoordenbank_v65_expanded_317';
+const CATALOG_URL='docent/antwoordenbank-v65.json?v=20261024';
+let catalogRequested=false;
 // De bank blijft in deze browser en wordt nooit meegestuurd naar GitHub of de Worker.
 function validBank(o){
  return Array.isArray(o?.items)&&o.items.length>=200&&
@@ -24,6 +26,22 @@ function restoreBank(){
  }catch(e){console.warn('De lokale antwoordenbank kon niet worden hersteld.',e)}
 }
 
+async function loadHostedBank(){
+ try{
+  const response=await fetch(CATALOG_URL,{cache:'no-store'});
+  if(!response.ok)throw Error('HTTP '+response.status);
+  const data=await response.json();
+  if(!validBank(data))throw Error('De centrale catalogus heeft een ongeldig formaat.');
+  bank=data.items;
+  loaded='GitHub-catalogus ('+bank.length+' vragen)';
+  notifyBank();
+ }catch(err){
+  console.warn('Centrale docentcatalogus niet beschikbaar: ',err);
+  document.querySelectorAll('.ta-load-state').forEach(el=>{
+   el.textContent=bank.length?bank.length+' lokaal geladen vragen (GitHub tijdelijk niet beschikbaar)':'Centrale catalogus niet beschikbaar. Gebruik zo nodig de JSON-import.';
+  });
+ }
+}
 const teamNum={A:1,B:2,C:3,D:4};
 const CHAT_URL='https://chatgpt.com/g/g-p-6abf7a7750488191aa4d6d50ccc71a25-cursus-assetmanagement/c/6adcc685-328c-83eb-9e09-1acb86802803';
 const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ');
@@ -69,7 +87,7 @@ if(field.dataset.answerHelper)return;
 field.dataset.answerHelper='1';
 const id=Number(field.id.slice(7));
 const wrap=document.createElement('div');wrap.className='teacher-answer';
-wrap.innerHTML='<h3>Docentassistent · antwoordenbank</h3><p>Laad één keer de privé-antwoordenbank met verdiepende vragen. Alleen vragen die extra, onderbouwde informatie opleveren worden automatisch voorgesteld; oudere naslag is doorzoekbaar. Controleer vóór verzending altijd de inhoud en bewijsstatus.</p><p class="ta-load-state" role="status">Nog geen uitgebreide vragenbank geladen</p><input type="file" accept=".json,application/json" aria-label="Privé antwoordenbank laden"><input type="search" placeholder="Zoek extra informatie of eerdere naslag…" aria-label="Zoeken"><select aria-label="Passend antwoord selecteren"></select><div class="ta-preview">Laad eerst het privé JSON-bestand.</div><div class="ta-actions"><button type="button" class="ta-use">Antwoord overnemen</button><button type="button" class="secondary ta-ai">Vraag naar projectchat kopiëren</button></div><p class="ta-status" role="status"></p>';
+wrap.innerHTML='<h3>Docentassistent · antwoordenbank</h3><p>De uitgebreide antwoordenbank wordt automatisch vanuit GitHub geladen. Alleen vragen die extra, onderbouwde informatie opleveren worden automatisch voorgesteld; oudere naslag is doorzoekbaar. Controleer vóór verzending altijd de inhoud en bewijsstatus.</p><p class="ta-load-state" role="status">Nog geen uitgebreide vragenbank geladen</p><input type="file" accept=".json,application/json" aria-label="Privé antwoordenbank laden"><input type="search" placeholder="Zoek extra informatie of eerdere naslag…" aria-label="Zoeken"><select aria-label="Passend antwoord selecteren"></select><div class="ta-preview">Laad eerst het privé JSON-bestand.</div><div class="ta-actions"><button type="button" class="ta-use">Antwoord overnemen</button><button type="button" class="secondary ta-ai">Vraag naar projectchat kopiëren</button></div><p class="ta-status" role="status"></p>';
 const [file,search,select]=[wrap.querySelector('input[type=file]'),wrap.querySelector('input[type=search]'),wrap.querySelector('select')];
 const preview=wrap.querySelector('.ta-preview'),status=wrap.querySelector('.ta-status');
 const current=()=>getQuestion(id),team=()=>teamNum[current()?.team],available=()=>bank.filter(x=>Number(x.team)===team()&&Number(x.round)<=Number(current()?.round||1));
@@ -101,7 +119,7 @@ function render(){
    +uncertainty+chosen.answer+'\n\nBewijsstatus: '+(chosen.status||'niet opgegeven')
    +'\nBron: '+(chosen.source||chosen.source_code||'onbekend')
    +(chosen.note?'\nDocentnotitie: '+chosen.note:'')
-  :bank.length?'Geen passende vraag. Probeer een andere zoekterm.':'Laad de uitgebreide privé-antwoordenbank eenmalig via het JSON-bestand.';
+  :bank.length?'Geen passende vraag. Probeer een andere zoekterm.':'De centrale antwoordenbank wordt geladen. Als dat niet lukt, kun je het JSON-bestand handmatig kiezen.';
  wrap.querySelector('.ta-use').disabled=!chosen||(match<2&&!query);
  wrap.querySelector('.ta-ai').disabled=false;
  const label=wrap.querySelector('.ta-load-state');
@@ -180,7 +198,18 @@ wrap.querySelector('.ta-ai').addEventListener('click',()=>{
 });
 field.insertAdjacentElement('afterend',wrap);render()
 }
-let busy=false;function mount(){if(busy||!active())return;busy=true;try{css();document.querySelectorAll('textarea[id^="answer-"]').forEach(panel)}finally{busy=false}}
+let busy=false;function mount(){
+ if(busy||!active())return;
+ busy=true;
+ try{
+  css();
+  document.querySelectorAll('textarea[id^="answer-"]').forEach(panel);
+  if(!catalogRequested){
+   catalogRequested=true;
+   loadHostedBank();
+  }
+ }finally{busy=false}
+}
 const boot=()=>{new MutationObserver(mount).observe(document.body,{childList:true,subtree:true});mount()};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{restoreBank();boot()},{once:true});else {restoreBank();boot()}
 })();
