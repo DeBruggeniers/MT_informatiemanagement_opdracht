@@ -6,6 +6,7 @@
 'use strict';
 let bank=[],loaded='';
 const teamNum={A:1,B:2,C:3,D:4};
+const CHAT_URL='https://chatgpt.com/g/g-p-6abf7a7750488191aa4d6d50ccc71a25-cursus-assetmanagement/c/6ad0d8a9-087c-83ed-81de-faa255719706';
 const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ');
 const terms=s=>new Set(norm(s).split(/\s+/).filter(w=>w.length>3&&!['welke','waarom','kunnen','worden','heeft','zijn','deze','voor','door','over'].includes(w)));
 function relevance(a,b){const x=terms(a),y=terms(b);let n=0;for(const t of x)if(y.has(t))n++;return n;}
@@ -29,7 +30,7 @@ if(field.dataset.answerHelper)return;
 field.dataset.answerHelper='1';
 const id=Number(field.id.slice(7));
 const wrap=document.createElement('div');wrap.className='teacher-answer';
-wrap.innerHTML='<h3>Docentassistent · antwoordenbank</h3><p>Laad de privé-antwoordenbank. Alleen antwoorden van dit MT worden getoond. Een concept wordt nooit automatisch verstuurd.</p><input type="file" accept=".json,application/json" aria-label="Privé antwoordenbank laden"><input type="search" placeholder="Zoek in 20 antwoorden…" aria-label="Zoeken"><select aria-label="Passend antwoord selecteren"></select><div class="ta-preview">Laad eerst het privé JSON-bestand.</div><div class="ta-actions"><button type="button" class="ta-use">Antwoord overnemen</button><button type="button" class="secondary ta-ai">Concept met ChatGPT</button></div><p class="ta-status" role="status"></p>';
+wrap.innerHTML='<h3>Docentassistent · antwoordenbank</h3><p>Laad de privé-antwoordenbank. Alleen antwoorden van dit MT worden getoond. Een concept wordt nooit automatisch verstuurd.</p><input type="file" accept=".json,application/json" aria-label="Privé antwoordenbank laden"><input type="search" placeholder="Zoek in 20 antwoorden…" aria-label="Zoeken"><select aria-label="Passend antwoord selecteren"></select><div class="ta-preview">Laad eerst het privé JSON-bestand.</div><div class="ta-actions"><button type="button" class="ta-use">Antwoord overnemen</button><button type="button" class="secondary ta-ai">Vraag naar projectchat kopiëren</button></div><p class="ta-status" role="status"></p>';
 const [file,search,select]=[wrap.querySelector('input[type=file]'),wrap.querySelector('input[type=search]'),wrap.querySelector('select')];
 const preview=wrap.querySelector('.ta-preview'),status=wrap.querySelector('.ta-status');
 const current=()=>getQuestion(id),team=()=>teamNum[current()?.team],available=()=>bank.filter(x=>x.team===team());
@@ -41,7 +42,7 @@ function render(){
  if([...select.options].some(o=>o.value===keep)&&search.value)select.value=keep;
  const chosen=available()[Number(select.value)];
  preview.textContent=chosen?chosen.answer+'\n\nBewijsstatus: '+chosen.status+'\nBron: '+chosen.source:bank.length?'Geen passende vraag. Probeer een andere zoekterm.':'Laad eerst het privé JSON-bestand.';
- wrap.querySelector('.ta-use').disabled=!chosen;wrap.querySelector('.ta-ai').disabled=!q||!bank.length;
+ wrap.querySelector('.ta-use').disabled=!chosen;wrap.querySelector('.ta-ai').disabled=!q;
 }
 file.addEventListener('change',async()=>{
  try{const o=JSON.parse(await file.files[0].text());if(!Array.isArray(o.items)||o.items.length!==80||[1,2,3,4].some(t=>o.items.filter(x=>x.team===t).length!==20)||o.items.some(x=>!x.question||!x.answer))throw Error('Onjuist formaat: verwacht 20 vragen en antwoorden per MT.');
@@ -51,9 +52,38 @@ file.addEventListener('change',async()=>{
 search.addEventListener('input',render);select.addEventListener('change',render);wrap.addEventListener('answer-bank-loaded',render);
 wrap.querySelector('.ta-use').addEventListener('click',()=>{const x=available()[Number(select.value)];if(!x)return;field.value=x.answer;field.dispatchEvent(new Event('input',{bubbles:true}));status.textContent='Concept overgenomen. Controleer de tekst en klik zelf op Verstuur antwoord.'});
 wrap.querySelector('.ta-ai').addEventListener('click',async()=>{
-const q=current();if(!q)return;const text=prompt(q,team());
-try{await navigator.clipboard.writeText(text);status.textContent='Prompt gekopieerd. Plak deze in ChatGPT en controleer het antwoord.';window.open('https://chatgpt.com/','_blank','noopener,noreferrer')}
-catch{const t=document.createElement('textarea');t.value=text;t.rows=5;t.setAttribute('aria-label','Kopieer de ChatGPT-prompt');wrap.appendChild(t);t.select();status.textContent='Kopieer de getoonde prompt handmatig naar ChatGPT.'}
+ const q=current();if(!q)return;
+ const message=prompt(q,team());
+ // Open het venster rechtstreeks tijdens de klik om pop-upblokkering te voorkomen.
+ const chat=window.open(CHAT_URL,'_blank','noopener,noreferrer');
+ let copied=false;
+ try{
+  await navigator.clipboard.writeText(message);
+  copied=true;
+ }catch(err){
+  // Clipboard may be restricted; provide a selectable fallback prompt.
+  const previous=wrap.querySelector('.ta-manual-prompt');
+  if(previous)previous.remove();
+  const area=document.createElement('textarea');
+  area.className='ta-manual-prompt';
+  area.rows=7;
+  area.readOnly=true;
+  area.value=message;
+  area.setAttribute('aria-label','Prompt voor de cursusprojectchat');
+  wrap.appendChild(area);
+  area.select();
+  status.textContent='Automatisch kopiëren is geblokkeerd. Kopieer de geselecteerde tekst en plak deze in de projectchat.';
+ }
+ if(copied){
+  status.textContent=chat
+   ?'Vraag met scenario-informatie gekopieerd. Plak met Ctrl+V in de geopende projectchat en verzend.'
+   :'Vraag gekopieerd. Open de projectchat via de onderstaande link, plak met Ctrl+V en verzend.';
+ }
+ if(!chat){
+  let link=wrap.querySelector('.ta-chat-link');
+  if(!link){link=document.createElement('a');link.className='ta-chat-link';link.target='_blank';link.rel='noopener noreferrer';link.textContent='Open ChatGPT-projectchat';wrap.appendChild(link);}
+  link.href=CHAT_URL;
+ }
 });
 field.insertAdjacentElement('afterend',wrap);render()
 }
