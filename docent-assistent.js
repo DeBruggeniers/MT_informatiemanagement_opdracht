@@ -38,7 +38,7 @@ async function loadHostedBank(){
  }catch(err){
   console.warn('Centrale docentcatalogus niet beschikbaar: ',err);
   document.querySelectorAll('.ta-load-state').forEach(el=>{
-   el.textContent=bank.length?bank.length+' lokaal geladen vragen (GitHub tijdelijk niet beschikbaar)':'Centrale catalogus niet beschikbaar. Gebruik zo nodig de JSON-import.';
+   el.textContent=bank.length?bank.length+' lokaal geladen vragen (GitHub tijdelijk niet beschikbaar)':'De centrale catalogus is niet beschikbaar. Vernieuw de pagina of controleer de GitHub-publicatie.';
   });
  }
 }
@@ -86,8 +86,8 @@ if(field.dataset.answerHelper)return;
 field.dataset.answerHelper='1';
 const id=Number(field.id.slice(7));
 const wrap=document.createElement('div');wrap.className='teacher-answer';
-wrap.innerHTML='<h3>Docentassistent · antwoordenbank</h3><p>De uitgebreide antwoordenbank wordt automatisch vanuit GitHub geladen. Alleen vragen die extra, onderbouwde informatie opleveren worden automatisch voorgesteld; oudere naslag is doorzoekbaar. Controleer vóór verzending altijd de inhoud en bewijsstatus.</p><p class="ta-load-state" role="status">Nog geen uitgebreide vragenbank geladen</p><input type="file" accept=".json,application/json" aria-label="Privé antwoordenbank laden"><input type="search" placeholder="Zoek extra informatie of eerdere naslag…" aria-label="Zoeken"><select aria-label="Passend antwoord selecteren"></select><div class="ta-preview">Laad eerst het privé JSON-bestand.</div><div class="ta-actions"><button type="button" class="ta-use">Antwoord overnemen</button><button type="button" class="secondary ta-ai">Vraag naar projectchat kopiëren</button></div><p class="ta-status" role="status"></p>';
-const [file,search,select]=[wrap.querySelector('input[type=file]'),wrap.querySelector('input[type=search]'),wrap.querySelector('select')];
+wrap.innerHTML='<h3>Docentassistent · antwoordenbank</h3><p>De antwoordenbank wordt automatisch vanuit GitHub geladen. Verdiepende informatievragen krijgen voorrang; oudere naslag blijft doorzoekbaar. Controleer vóór verzending altijd de inhoud en bewijsstatus.</p><p class="ta-load-state" role="status">Nog geen uitgebreide vragenbank geladen</p><input type="search" placeholder="Zoek extra informatie of eerdere naslag…" aria-label="Zoeken"><select aria-label="Passend antwoord selecteren"></select><div class="ta-preview">Antwoordenbank wordt geladen vanuit GitHub…</div><div class="ta-actions"><button type="button" class="ta-use">Antwoord overnemen</button><button type="button" class="secondary ta-ai">Vraag naar projectchat kopiëren</button></div><p class="ta-status" role="status"></p>';
+const [search,select]=[wrap.querySelector('input[type=search]'),wrap.querySelector('select')];
 const preview=wrap.querySelector('.ta-preview'),status=wrap.querySelector('.ta-status');
 const current=()=>getQuestion(id),team=()=>teamNum[current()?.team],available=()=>bank.filter(x=>Number(x.team)===team()&&Number(x.round)<=Number(current()?.round||1));
 let manualChoice=null;
@@ -118,23 +118,12 @@ function render(){
    +uncertainty+chosen.answer+'\n\nBewijsstatus: '+(chosen.status||'niet opgegeven')
    +'\nBron: '+(chosen.source||chosen.source_code||'onbekend')
    +(chosen.note?'\nDocentnotitie: '+chosen.note:'')
-  :bank.length?'Geen passende vraag. Probeer een andere zoekterm.':'De centrale antwoordenbank wordt geladen. Als dat niet lukt, kun je het JSON-bestand handmatig kiezen.';
+  :bank.length?'Geen passende vraag. Probeer een andere zoekterm.':'De centrale antwoordenbank wordt automatisch geladen. Vernieuw de pagina als er geen antwoorden verschijnen.';
  wrap.querySelector('.ta-use').disabled=!chosen||(match<2&&!query);
  wrap.querySelector('.ta-ai').disabled=false;
  const label=wrap.querySelector('.ta-load-state');
  if(label)label.textContent=bank.length?bank.length+' vragen geladen · '+available().length+' voor dit MT t/m ronde '+currentRound:'Nog geen uitgebreide vragenbank geladen';
 }
-file.addEventListener('change',async()=>{
- try{
-  const selected=file.files?.[0];if(!selected)return;
-  const raw=await selected.text(),o=JSON.parse(raw);
-  if(!validBank(o))throw Error('Onjuist formaat: verwacht de uitgebreide docentenvragenbank met minimaal 200 vragen en geldige MT- en rondegegevens.');
-  bank=o.items;loaded=selected.name;
-  try{localStorage.setItem(STORAGE_KEY,raw);status.textContent=bank.length+' vragen opgeslagen in deze browser. Voortaan automatisch beschikbaar.'}
-  catch{status.textContent=bank.length+' vragen geladen, maar lokaal opslaan is geblokkeerd. Volgende keer opnieuw laden.'}
-  notifyBank();
- }catch(e){status.textContent='Importeren mislukt: '+e.message}
-});
 search.addEventListener('input',()=>{manualChoice=null;render()});select.addEventListener('change',()=>{manualChoice=select.value;render()});wrap.addEventListener('answer-bank-loaded',()=>{manualChoice=null;render()});
 wrap.querySelector('.ta-use').addEventListener('click',()=>{const x=select.options.length?available()[Number(select.value)]:null;if(!x||wrap.querySelector('.ta-use').disabled)return;field.value=x.answer;field.dispatchEvent(new Event('input',{bubbles:true}));status.textContent='Concept overgenomen. Controleer de tekst en klik zelf op Verstuur antwoord.'});
 function manualPrompt(message){
