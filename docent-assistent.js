@@ -5,8 +5,8 @@
 (()=>{
 'use strict';
 let bank=[],loaded='';
-const STORAGE_KEY='mt_docent_antwoordenbank_v65_expanded_317';
-const CATALOG_URL='docent/antwoordenbank-v65.json?v=20261024';
+const STORAGE_KEY='mt_docent_antwoordenbank_v77_256';
+const CATALOG_URL='docent/antwoordenbank-v77.json?v=20261025';
 let catalogRequested=false;
 // De bank blijft in deze browser en wordt nooit meegestuurd naar GitHub of de Worker.
 function validBank(o){
@@ -21,7 +21,7 @@ function restoreBank(){
   if(!raw)return;
   const o=JSON.parse(raw);
   if(!validBank(o))return;
-  bank=o.items;loaded='Opgeslagen uitgebreide docentenantwoordenbank (v6.5)';
+  bank=o.items;loaded='Opgeslagen actuele docentenantwoordenbank (v7.7)';
   notifyBank();
  }catch(e){console.warn('De lokale antwoordenbank kon niet worden hersteld.',e)}
 }
@@ -73,11 +73,11 @@ function prompt(q,team){
   .filter(x=>x.rank>=2).sort((a,b)=>b.rank-a.rank).slice(0,4);
  return [
   'DOCENTASSISTENT | MT AAN HET STUUR | CURSUS ASSETMANAGEMENT',
-  'Beantwoord de letterlijke informatievraag binnen de fictieve assetmanagementsimulatie MT aan het stuur, op basis van de actuele canonieke werkelijkheid en het werkelijkheidsdossier v7.7. Gebruik de COMPLETE_DOCENTANTWOORDENBANK_v7-7 en de beschikbare projectdocumenten als leidende bronnen. De hieronder meegegeven antwoorden uit de oudere websitecatalogus zijn uitsluitend aanvullende naslag: neem ze alleen over als ze overeenkomen met v7.7. Bij verschillen gaat v7.7 voor. Alle geregistreerde scenariofeiten zijn fictieve oefenfeiten. Maak onderscheid tussen vastgestelde waarnemingen, aangetoonde verbanden, hypotheses, prognoses en financiële aannames. Verzin geen cijfers, stel onbewezen oorzaken niet als feiten voor en reken bedragen of meeteenheden met verschillende afbakeningen niet bij elkaar op.',
+  'Beantwoord de letterlijke informatievraag binnen de fictieve assetmanagementsimulatie MT aan het stuur, op basis van de actuele canonieke werkelijkheid en het werkelijkheidsdossier v7.7. Gebruik de COMPLETE_DOCENTANTWOORDENBANK_v7-7 en de beschikbare projectdocumenten als leidende bronnen. De hieronder meegegeven antwoorden komen uit de actuele v7.7-websitecatalogus. Bij twijfel of een bronconflict gaat de canonieke werkelijkheid v7.7 voor. Alle geregistreerde scenariofeiten zijn fictieve oefenfeiten. Maak onderscheid tussen vastgestelde waarnemingen, aangetoonde verbanden, hypotheses, prognoses en financiële aannames. Verzin geen cijfers, stel onbewezen oorzaken niet als feiten voor en reken bedragen of meeteenheden met verschillende afbakeningen niet bij elkaar op.',
   'Informatiepositie: MT '+team+'; informatieronde '+round+'. Beantwoord uitsluitend de gestelde vraag. Verstrek geen ongevraagde informatie uit andere MT-dossiers, geen volledige interventieafweging en geen hints naar de beste maatregel. Een gerichte vraag mag wel relevante achterliggende informatie opleveren, mits die in het scenario onderbouwd is.',
   'Geef precies twee onderdelen: (1) ANTWOORD AAN MT, maximaal 120 woorden, direct kopieerbaar naar de simulatie; (2) DOCENTCONTROLE, met bron, bewijsstatus en eventuele ontbrekende informatie. Houd onderdeel 2 buiten het antwoord aan het MT.',
   'LETTERLIJKE VRAAG MT '+team+' (ronde '+round+'): '+q.question,
-  references.length?'RELEVANTE GEGEVENS UIT DE CENTRALE DOCENTANTWOORDENBANK:':'Geen passende antwoordenbankvermelding meegegeven; controleer de projectbronnen en zeg expliciet wanneer de gegevens ontbreken.',
+  references.length?'RELEVANTE GEGEVENS UIT DE ACTUELE DOCENTANTWOORDENBANK V7.7:':'Geen passende antwoordenbankvermelding meegegeven; controleer de projectbronnen en zeg expliciet wanneer de gegevens ontbreken.',
   ...references.map((x,i)=>(i+1)+'. '+x.question+'\nAntwoord: '+x.answer+'\nBewijsstatus: '+x.status+'; bron: '+x.source)
  ].join('\n\n');
 }
