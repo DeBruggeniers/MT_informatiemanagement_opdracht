@@ -101,7 +101,7 @@ function renderTeam(host){
  const newDash=dashAvailable.some(d=>d.round===r)&&r<=3;
  let h='<section class="card mt-hero"><div class="mt-hero-top"><div><div class="mt-eyebrow">◈ &nbsp; Provinciaal Beheer & Uitvoering</div><h1>Managementteam '+safe(({A:1,B:2,C:3,D:4})[s.team]||s.team)+'</h1></div><div class="mt-round-tag">'+safe(phases[r])+'</div></div>'+steps(r);
  if(r===0)h+='<div class="note">De eerste informatieronde wordt door de opleider gestart.</div>';
- if(r>0)h+='</section><nav class="mt-nav" aria-label="Onderdelen"><a href="#doelen"><span class="nav-dot"></span>Doelstellingen</a>'+(integrated?'<a href="#dashboard"><span class="nav-dot"></span>Dashboard</a>':'')+(s.team==='D'?'':'<a href="#documenten"><span class="nav-dot"></span>Informatiedossier</a>')+'<a href="#informatievragen"><span class="nav-dot"></span>Informatievragen</a><a href="#besluiten"><span class="nav-dot"></span>Besluiten</a></nav><section class="card mt-goals" id="doelen"><h2 class="mt-section-title">Assetmanagementdoelstellingen</h2><ul>'+(s.samp||[]).map(x=>'<li>'+safe(window.MTPresentation.goal(x))+'</li>').join('')+'</ul>';
+ if(r>0)h+='</section><nav class="mt-nav" aria-label="Onderdelen"><a href="#doelen"><span class="nav-dot"></span>Doelstellingen</a>'+(integrated?'<a href="#dashboard"><span class="nav-dot"></span>Dashboard</a>':'')+(integrated?'':'<a href="#documenten"><span class="nav-dot"></span>Informatiedossier</a>')+'<a href="#informatievragen"><span class="nav-dot"></span>Informatievragen</a><a href="#besluiten"><span class="nav-dot"></span>Besluiten</a></nav><section class="card mt-goals" id="doelen"><h2 class="mt-section-title">Assetmanagementdoelstellingen</h2><ul>'+(s.samp||[]).map(x=>'<li>'+safe(window.MTPresentation.goal(x))+'</li>').join('')+'</ul>';
  if(s.revealed)h+='<div class="note"><strong>Onthulling:</strong> alle managementteams bestuurden dezelfde organisatie en kregen verschillende informatie.</div>';
  h+='</section>';
  if(r>0){
@@ -224,7 +224,7 @@ if(a==='dashboard'){
   if(host)host.style.display=dashboardOpen?'block':'none';
   if(button)button.textContent=dashboardOpen?'Dashboard sluiten':'Dashboard openen';
   if(dashboardOpen){
-   const ids=state.team==='C'?['c21','c32']:['d11','d12','d21','d22','d31','d32'];
+   const ids=state.team==='C'?['c11','c12','c21','c22','c31','c32']:['d11','d12','d21','d22','d31','d32'];
    await loadDashboard((state.documents||[]).filter(d=>ids.includes(d.id)));
    host?.scrollIntoView({behavior:'smooth',block:'start'});
   }
