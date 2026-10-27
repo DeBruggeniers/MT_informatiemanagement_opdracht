@@ -92,12 +92,12 @@ function render(){const host=el('screen');if(role==='admin')return renderAdmin(h
 function renderTeam(host){
  const s=state,r=s.round,docs=s.documents||[];
  const integrated=s.team==='C'||s.team==='D';
- if(s.team==='D')dashboardOpen=true;
- const dashIds=s.team==='C'?['c21','c32']:s.team==='D'?['d11','d12','d21','d22','d31','d32']:[];
+ if(s.team==='C'||s.team==='D')dashboardOpen=true;
+ const dashIds=s.team==='C'?['c11','c12','c21','c22','c31','c32']:s.team==='D'?['d11','d12','d21','d22','d31','d32']:[];
  const dashAvailable=docs.filter(d=>dashIds.includes(d.id));
- const supplements=s.team==='D'?[]:integrated?docs.filter(d=>!dashIds.includes(d.id)):docs;
+ const supplements=integrated?[]:docs;
  const dashReleased=dashAvailable.length>0;
- const newCount=s.team==='D'?docs.filter(d=>d.round===r).length:supplements.filter(d=>d.round===r).length;
+ const newCount=integrated?docs.filter(d=>d.round===r).length:supplements.filter(d=>d.round===r).length;
  const newDash=dashAvailable.some(d=>d.round===r)&&r<=3;
  let h='<section class="card mt-hero"><div class="mt-hero-top"><div><div class="mt-eyebrow">◈ &nbsp; Provinciaal Beheer & Uitvoering</div><h1>Managementteam '+safe(({A:1,B:2,C:3,D:4})[s.team]||s.team)+'</h1></div><div class="mt-round-tag">'+safe(phases[r])+'</div></div>'+steps(r);
  if(r===0)h+='<div class="note">De eerste informatieronde wordt door de opleider gestart.</div>';
@@ -108,13 +108,13 @@ function renderTeam(host){
   if(integrated){
    h+='<section class="card mt-dashboard-card" id="dashboard"><div class="panel-heading"><div><h2 class="mt-section-title">Managementdashboard</h2><p class="muted">Eén samenhangend overzicht. Nieuwe onderdelen verschijnen zodra de volgende informatieronde is vrijgegeven.</p></div>'+(newDash?'<span class="new-label">Nieuw</span>':'')+'</div>';
    if(dashReleased){
-    h+='<div class="dash-toolbar"><span>'+safe(s.team==='C'?'Middelen en ontwikkeling':'Integrale doelsturing')+'</span>'+(s.team==='D'?'':btn(dashboardOpen?'Dashboard sluiten':'Dashboard openen','dashboard','secondary'))+'</div><div id="dashboard-host" class="dashboard-host" style="display:'+(dashboardOpen?'block':'none')+'"><div class="muted">Open het dashboard om alle vrijgegeven onderdelen samen te bekijken.</div></div>';
+    h+='<div class="dash-toolbar"><span>'+safe(s.team==='C'?'Middelen en ontwikkeling':'Integrale doelsturing')+'</span>'+(integrated?'':btn(dashboardOpen?'Dashboard sluiten':'Dashboard openen','dashboard','secondary'))+'</div><div id="dashboard-host" class="dashboard-host" style="display:'+(dashboardOpen?'block':'none')+'"><div class="muted">Open het dashboard om alle vrijgegeven onderdelen samen te bekijken.</div></div>';
    }else{
     h+='<div class="note">Het managementdashboard wordt in een volgende informatieronde beschikbaar gesteld.</div>';
    }
    h+='</section>';
   }
-  if(s.team!=='D')h+='<div class="split" id="documenten"><section class="card mt-documents-card"><div class="mt-doc-header">DIGITAAL INFORMATIEDOSSIER</div><h2 class="mt-section-title">'+(integrated?'Aanvullende documenten':'Beschikbare informatie')+'</h2><p class="muted">Vrijgegeven notities en correspondentie blijven beschikbaar.</p>'+
+  if(!integrated)h+='<div class="split" id="documenten"><section class="card mt-documents-card"><div class="mt-doc-header">DIGITAAL INFORMATIEDOSSIER</div><h2 class="mt-section-title">'+(integrated?'Aanvullende documenten':'Beschikbare informatie')+'</h2><p class="muted">Vrijgegeven notities en correspondentie blijven beschikbaar.</p>'+
    (r<=3?'<div class="new-info"><strong>Ronde '+r+': '+newCount+' nieuwe documenten</strong><div>Nieuwe documenten staan bovenaan.</div></div>':'')+
    [...supplements].sort((x,y)=>y.round-x.round).map(d=>
     '<div class="doc'+(d.round===r&&r<=3?' doc-new':'')+'"><b>'+safe(d.title)+'</b>'+
@@ -182,13 +182,13 @@ async function loadDashboard(documents){
    const link=document.createElement('a');
    link.href='#dashboard-onderdeel-'+i;
    link.dataset.dashboardPart=String(i);
-   link.textContent=state.team==='D'?(['R1 · Doelen','R1 · Signalen','R2 · Prestaties','R2 · Oorzaken','R3 · Maatregelen','R3 · Besluitkaart'][['d11','d12','d21','d22','d31','d32'].indexOf(documents[i].id)]||p.title):(i===0?'Kernoverzicht':(state.team==='C'?'Ontwikkelvermogen':'Interventieafweging'));
+   link.textContent=state.team==='C'?(['R1 · Budget','R1 · Capaciteit','R2 · Kosten','R2 · Beheersopties','R3 · Strategieën','R3 · Uitvoering'][['c11','c12','c21','c22','c31','c32'].indexOf(documents[i].id)]||p.title):state.team==='D'?(['R1 · Doelen','R1 · Signalen','R2 · Prestaties','R2 · Oorzaken','R3 · Maatregelen','R3 · Besluitkaart'][['d11','d12','d21','d22','d31','d32'].indexOf(documents[i].id)]||p.title):(i===0?'Kernoverzicht':(state.team==='C'?'Ontwikkelvermogen':'Interventieafweging'));
    link.style.cssText='color:#174f82;background:#dcecf9;padding:8px 12px;text-decoration:none;border-radius:6px;font-weight:600';
    nav.appendChild(link);
    return module;
   });
   target.replaceChildren(nav,...modules);
-  if(state.team==='D'&&dashboardActivePart>=modules.length)dashboardActivePart=modules.length-1;
+  if((state.team==='C'||state.team==='D')&&dashboardActivePart>=modules.length)dashboardActivePart=modules.length-1;
   selectDashboardPart(dashboardActivePart);
  }catch(e){
   if(target.isConnected)target.textContent='Dashboard kon niet worden geladen: '+e.message;
