@@ -92,28 +92,28 @@ function render(){const host=el('screen');if(role==='admin')return renderAdmin(h
 function renderTeam(host){
  const s=state,r=s.round,docs=s.documents||[];
  const integrated=s.team==='C'||s.team==='D';
- const dashIds=s.team==='C'?['c21','c32']:s.team==='D'?['d21','d31']:[];
+ const dashIds=s.team==='C'?['c21','c32']:s.team==='D'?['d11','d12','d21','d22','d31','d32']:[];
  const dashAvailable=docs.filter(d=>dashIds.includes(d.id));
- const supplements=integrated?docs.filter(d=>!dashIds.includes(d.id)):docs;
+ const supplements=s.team==='D'?[]:integrated?docs.filter(d=>!dashIds.includes(d.id)):docs;
  const dashReleased=dashAvailable.length>0;
- const newCount=supplements.filter(d=>d.round===r).length;
+ const newCount=s.team==='D'?docs.filter(d=>d.round===r).length:supplements.filter(d=>d.round===r).length;
  const newDash=dashAvailable.some(d=>d.round===r)&&r<=3;
  let h='<section class="card mt-hero"><div class="mt-hero-top"><div><div class="mt-eyebrow">◈ &nbsp; Provinciaal Beheer & Uitvoering</div><h1>Managementteam '+safe(({A:1,B:2,C:3,D:4})[s.team]||s.team)+'</h1></div><div class="mt-round-tag">'+safe(phases[r])+'</div></div>'+steps(r);
  if(r===0)h+='<div class="note">De eerste informatieronde wordt door de opleider gestart.</div>';
- if(r>0)h+='</section><nav class="mt-nav" aria-label="Onderdelen"><a href="#doelen"><span class="nav-dot"></span>Doelstellingen</a>'+(integrated?'<a href="#dashboard"><span class="nav-dot"></span>Dashboard</a>':'')+'<a href="#documenten"><span class="nav-dot"></span>Informatiedossier</a><a href="#informatievragen"><span class="nav-dot"></span>Informatievragen</a><a href="#besluiten"><span class="nav-dot"></span>Besluiten</a></nav><section class="card mt-goals" id="doelen"><h2 class="mt-section-title">Assetmanagementdoelstellingen</h2><ul>'+(s.samp||[]).map(x=>'<li>'+safe(window.MTPresentation.goal(x))+'</li>').join('')+'</ul>';
+ if(r>0)h+='</section><nav class="mt-nav" aria-label="Onderdelen"><a href="#doelen"><span class="nav-dot"></span>Doelstellingen</a>'+(integrated?'<a href="#dashboard"><span class="nav-dot"></span>Dashboard</a>':'')+'+(s.team==='D'?'':'<a href="#documenten"><span class="nav-dot"></span>Informatiedossier</a>')+'<a href="#informatievragen"><span class="nav-dot"></span>Informatievragen</a><a href="#besluiten"><span class="nav-dot"></span>Besluiten</a></nav><section class="card mt-goals" id="doelen"><h2 class="mt-section-title">Assetmanagementdoelstellingen</h2><ul>'+(s.samp||[]).map(x=>'<li>'+safe(window.MTPresentation.goal(x))+'</li>').join('')+'</ul>';
  if(s.revealed)h+='<div class="note"><strong>Onthulling:</strong> alle managementteams bestuurden dezelfde organisatie en kregen verschillende informatie.</div>';
  h+='</section>';
  if(r>0){
   if(integrated){
    h+='<section class="card mt-dashboard-card" id="dashboard"><div class="panel-heading"><div><h2 class="mt-section-title">Managementdashboard</h2><p class="muted">Eén samenhangend overzicht. Nieuwe onderdelen verschijnen zodra de volgende informatieronde is vrijgegeven.</p></div>'+(newDash?'<span class="new-label">Nieuw</span>':'')+'</div>';
    if(dashReleased){
-    h+='<div class="dash-toolbar"><span>'+safe(s.team==='C'?'Middelen en ontwikkeling':'Integrale doelsturing')+'</span>'+btn(dashboardOpen?'Dashboard sluiten':'Dashboard openen','dashboard','secondary')+'</div><div id="dashboard-host" class="dashboard-host" style="display:'+(dashboardOpen?'block':'none')+'"><div class="muted">Open het dashboard om alle vrijgegeven onderdelen samen te bekijken.</div></div>';
+    h+='<div class="dash-toolbar"><span>'+safe(s.team==='C'?'Middelen en ontwikkeling':'Integrale doelsturing')+'</span>'+(s.team==='D'?'':btn(dashboardOpen?'Dashboard sluiten':'Dashboard openen','dashboard','secondary'))+'</div><div id="dashboard-host" class="dashboard-host" style="display:'+(dashboardOpen?'block':'none')+'"><div class="muted">Open het dashboard om alle vrijgegeven onderdelen samen te bekijken.</div></div>';
    }else{
     h+='<div class="note">Het managementdashboard wordt in een volgende informatieronde beschikbaar gesteld.</div>';
    }
    h+='</section>';
   }
-  h+='<div class="split" id="documenten"><section class="card mt-documents-card"><div class="mt-doc-header">DIGITAAL INFORMATIEDOSSIER</div><h2 class="mt-section-title">'+(integrated?'Aanvullende documenten':'Beschikbare informatie')+'</h2><p class="muted">Vrijgegeven notities en correspondentie blijven beschikbaar.</p>'+
+  if(s.team!=='D')h+='<div class="split" id="documenten"><section class="card mt-documents-card"><div class="mt-doc-header">DIGITAAL INFORMATIEDOSSIER</div><h2 class="mt-section-title">'+(integrated?'Aanvullende documenten':'Beschikbare informatie')+'</h2><p class="muted">Vrijgegeven notities en correspondentie blijven beschikbaar.</p>'+
    (r<=3?'<div class="new-info"><strong>Ronde '+r+': '+newCount+' nieuwe documenten</strong><div>Nieuwe documenten staan bovenaan.</div></div>':'')+
    [...supplements].sort((x,y)=>y.round-x.round).map(d=>
     '<div class="doc'+(d.round===r&&r<=3?' doc-new':'')+'"><b>'+safe(d.title)+'</b>'+
@@ -134,6 +134,7 @@ function renderTeam(host){
   h+='<h2>Eerdere besluiten</h2>'+(s.decisions||[]).map(d=>'<div class="doc"><b>Ronde '+safe(d.round)+'</b><p>'+safe(d.decision)+'</p></div>').join('')+'</section></div>';
  }
  host.innerHTML=h;
+ if(s.team==='D'&&dashReleased)dashboardOpen=true;
  if(integrated&&dashReleased&&dashboardOpen)loadDashboard(dashAvailable);
 }
 async function loadDashboard(documents){
@@ -169,7 +170,7 @@ async function loadDashboard(documents){
    while(article.firstChild)module.appendChild(article.firstChild);
    // De SVG-trendgrafieken uit dossier d21 komen in een responsief 2x2 raster.
    // Alleen het MT4-Kernoverzicht bevat deze vier grafieken; de dossierinhoud blijft ongewijzigd.
-   if((state.team==='C'||state.team==='D')&&i===0){
+   if((state.team==='C'||state.team==='D')&&documents[i].id==='d21'){
     const trendCharts=[...module.querySelectorAll('.mt-trend-chart')];
     if(trendCharts.length===4){
      const grid=document.createElement('div');
@@ -181,12 +182,13 @@ async function loadDashboard(documents){
    const link=document.createElement('a');
    link.href='#dashboard-onderdeel-'+i;
    link.dataset.dashboardPart=String(i);
-   link.textContent=i===0?'Kernoverzicht':(state.team==='C'?'Ontwikkelvermogen':'Interventieafweging');
+   link.textContent=state.team==='D'?(['R1 · Doelen','R1 · Signalen','R2 · Prestaties','R2 · Oorzaken','R3 · Maatregelen','R3 · Besluitkaart'][['d11','d12','d21','d22','d31','d32'].indexOf(documents[i].id)]||p.title):(i===0?'Kernoverzicht':(state.team==='C'?'Ontwikkelvermogen':'Interventieafweging'));
    link.style.cssText='color:#174f82;background:#dcecf9;padding:8px 12px;text-decoration:none;border-radius:6px;font-weight:600';
    nav.appendChild(link);
    return module;
   });
   target.replaceChildren(nav,...modules);
+  if(state.team==='D')dashboardActivePart=Math.max(0,modules.length-1);
   selectDashboardPart(dashboardActivePart);
  }catch(e){
   if(target.isConnected)target.textContent='Dashboard kon niet worden geladen: '+e.message;
@@ -222,7 +224,7 @@ if(a==='dashboard'){
   if(host)host.style.display=dashboardOpen?'block':'none';
   if(button)button.textContent=dashboardOpen?'Dashboard sluiten':'Dashboard openen';
   if(dashboardOpen){
-   const ids=state.team==='C'?['c21','c32']:['d21','d31'];
+   const ids=state.team==='C'?['c21','c32']:['d11','d12','d21','d22','d31','d32'];
    await loadDashboard((state.documents||[]).filter(d=>ids.includes(d.id)));
    host?.scrollIntoView({behavior:'smooth',block:'start'});
   }
