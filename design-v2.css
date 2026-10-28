@@ -118,3 +118,10 @@ label{margin-top:17px!important;margin-bottom:8px!important;color:#334767;font-w
 .dashboard-module:has(> .mt-trend-chart)>:not(.mt-trend-chart){grid-column:1/-1}
 .dashboard-module:has(> .mt-trend-chart)> .mt-trend-chart{min-width:0;margin:0!important}
 @media(max-width:900px){.dashboard-module:has(> .mt-trend-chart){grid-template-columns:minmax(0,1fr)}}
+
+/* Uniform lettertype voor alle informatiedossiers (MT1 t/m MT4).
+   Alleen dossierinhoud, niet de docentbediening of algemene navigatie. */
+#viewer article, #viewer article *,
+.dashboard-host .dashboard-module, .dashboard-host .dashboard-module * {
+ font-family: Arial, Helvetica, sans-serif !important;
+}
