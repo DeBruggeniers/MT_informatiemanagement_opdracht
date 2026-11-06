@@ -13,7 +13,7 @@
 <script>
 'use strict';
 const el=x=>document.getElementById(x),safe=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const phases=['Wachten op start','Ronde 1 – Signaleren','Ronde 2 – Verklaren','Ronde 3 – Besluiten','Eindresultaat'];
+const phases=['Wachten op start','Ronde 1 – Verkennen','Ronde 2 – Analyseren','Ronde 3 – Besluiten','Eindresultaat'];
 let role='',credential='',state=null,selectedDoc=null,poll=null;
  let dashboardOpen=false;
  let dashboardActivePart=0;
@@ -101,6 +101,15 @@ function renderTeam(host){
  const newDash=dashAvailable.some(d=>d.round===r)&&r<=3;
  let h='<section class="card mt-hero"><div class="mt-hero-top"><div><div class="mt-eyebrow">◈ &nbsp; Provinciaal Beheer & Uitvoering</div><h1>Managementteam '+safe(({A:1,B:2,C:3,D:4})[s.team]||s.team)+'</h1></div><div class="mt-round-tag">'+safe(phases[r])+'</div></div>'+steps(r);
  if(r===0)h+='<div class="note">De eerste informatieronde wordt door de opleider gestart.</div>';
+ if(r>=1&&r<=3){
+ const tasks={
+ 1:['Verkennen','Lees de eerste dossiers. Benoem maximaal drie problemen, mogelijke verklaringen en wat jullie nog niet weten. Stel maximaal twee gerichte informatievragen.','Resultaat: eerste probleemanalyse en onzekerheden. Nog geen definitief maatregelenbesluit.'],
+ 2:['Analyseren','Combineer de nieuwe informatie met ronde 1. Onderzoek oorzaken en verbanden. Stel maximaal twee nieuwe vragen.','Resultaat: aangescherpte analyse en voorlopige verbetermaatregelen.'],
+ 3:['Besluiten','Weeg maatregelen af op prestaties, risico\'s, kosten en uitvoerbaarheid. Gebruik maximaal twee laatste informatievragen.','Resultaat: onderbouwd besluit met verwachte effecten, restrisico\'s en onzekerheden.']
+ };
+ const task=tasks[r];
+ h+='<section class="card" id="ronde-opdracht" style="border-left:5px solid #ec7734"><h2>Jullie opdracht: '+task[0]+'</h2><p>'+task[1]+'</p><p><strong>'+task[2]+'</strong></p></section>';
+}
  if(r>0)h+='</section><nav class="mt-nav" aria-label="Onderdelen"><a href="#doelen"><span class="nav-dot"></span>Doelstellingen</a>'+(integrated?'<a href="#dashboard"><span class="nav-dot"></span>Dashboard</a>':'')+(integrated?'':'<a href="#documenten"><span class="nav-dot"></span>Informatiedossier</a>')+'<a href="#informatievragen"><span class="nav-dot"></span>Informatievragen</a><a href="#besluiten"><span class="nav-dot"></span>Besluiten</a></nav><section class="card mt-goals" id="doelen"><h2 class="mt-section-title">Assetmanagementdoelstellingen</h2><ul>'+(s.samp||[]).map(x=>'<li>'+safe(window.MTPresentation.goal(x))+'</li>').join('')+'</ul>';
  if(s.revealed)h+='<div class="note"><strong>Onthulling:</strong> alle managementteams bestuurden dezelfde organisatie en kregen verschillende informatie.</div>';
  h+='</section>';
@@ -121,14 +130,14 @@ function renderTeam(host){
     (d.round===r&&r<=3?'<span class="new-label">Nieuw</span>':'')+
     '<p class="muted">Notitie of correspondentie</p>'+btn('Open document','doc:'+d.id,'secondary')+'</div>'
    ).join('')+'</section><section class="card"><h2 class="mt-section-title">Documentlezer</h2><div id="viewer">Selecteer links een document.</div></section></div>';
-  h+='<div class="grid"><section class="card mt-question-card" id="informatievragen"><h2 class="mt-section-title">Informatievragen</h2><p class="muted">Maximaal twee vragen in de eerste twee rondes.</p>'+
-  (s.questions||[]).map(q=>'<div class="doc"><b>Vraag</b><p>'+safe(q.question)+'</p><b>Antwoord</b><p>'+safe(q.answer||'Nog niet beantwoord')+'</p></div>').join('');
-  if(r<=2&&(s.questions||[]).length<2)h+='<label>Welke aanvullende informatie hebben jullie nodig?</label><textarea id="question"></textarea>'+btn('Vraag indienen','ask');
-  h+='</section><section class="card mt-decision-card" id="besluiten"><h2 class="mt-section-title">Besluitregistratie</h2><p class="muted">Leg jullie diagnose, besluit en mate van zekerheid vast. Na opslaan wordt de registratie zichtbaar voor de docent.</p>';
+  h+='<div class="grid"><section class="card mt-question-card" id="informatievragen"><h2 class="mt-section-title">Informatievragen</h2><p class="muted">Maximaal twee vragen per ronde (zes in totaal). Resterend deze ronde: '+Math.max(0,2-(s.questions||[]).filter(q=>Number(q.round)===r).length)+' van 2.</p>'+
+  (s.questions||[]).map(q=>'<div class="doc"><b>Ronde '+safe(q.round)+' · Vraag</b><p>'+safe(q.question)+'</p><b>Antwoord</b><p>'+safe(q.answer||'Nog niet beantwoord')+'</p></div>').join('');
+  if(r>=1&&r<=3&&(s.questions||[]).filter(q=>Number(q.round)===r).length<2)h+='<label>Welke aanvullende informatie hebben jullie nodig?</label><textarea id="question"></textarea>'+btn('Vraag indienen','ask');
+  h+='</section><section class="card mt-decision-card" id="besluiten"><h2 class="mt-section-title">Besluitregistratie</h2><p class="muted">Leg per ronde jullie analyse en voorlopige of definitieve keuze vast. In ronde 1 is nog geen definitief maatregelenbesluit nodig.</p>';
   if(r<=3){
    const old=(s.decisions||[]).find(d=>d.round===r)||{};
    h+='<label>Waarnemingen en aannames</label><textarea id="observations">'+safe(old.observations||'')+'</textarea>'+
-   '<label>Besluit(en)</label><textarea id="decision">'+safe(old.decision||'')+'</textarea>'+
+   '<label>'+(r===1?'Eerste analyse en aandachtspunten':r===2?'Voorlopige maatregelen':'Definitief MT-besluit')+'</label><textarea id="decision">'+safe(old.decision||'')+'</textarea>'+
    '<label>Onderbouwing en onzekerheden</label><textarea id="reason">'+safe(old.reason||'')+'</textarea>'+
    '<label>Zekerheid (1–5)</label><select id="confidence">'+[1,2,3,4,5].map(n=>'<option value="'+n+'" '+((old.confidence||3)===n?'selected':'')+'>'+n+'</option>').join('')+'</select>'+btn('Besluit opslaan','save');
   }else h+='<p>De besluitvorming is gesloten.</p>';
@@ -229,7 +238,7 @@ if(a==='dashboard'){
    host?.scrollIntoView({behavior:'smooth',block:'start'});
   }
   return;
- }if(a.startsWith('doc:'))return loadDoc(a.slice(4));if(a==='ask'){await request('/api/team/ask',{question:el('question').value});formDirty=false;pendingUpdate=false;return refresh()}if(a==='save'){
+ }if(a.startsWith('doc:'))return loadDoc(a.slice(4));if(a==='ask'){const field=el('question');const question=(field?.value||'').trim();if(!question){alert('Vul eerst een informatievraag in.');return}const count=(state.questions||[]).filter(q=>Number(q.round)===Number(state.round)).length;if(count>=2){alert('Jullie hebben in deze ronde al twee vragen gesteld.');return}const button=document.querySelector('[data-action="ask"]');if(button)button.disabled=true;try{await request('/api/team/ask',{question});formDirty=false;pendingUpdate=false;await refresh(true)}catch(error){alert('De vraag is niet bevestigd: '+error.message+' Controleer of de vraag is opgeslagen voordat je opnieuw verzendt.')}finally{if(button&&button.isConnected)button.disabled=false}return}if(a==='save'){
  const round=state.round;
  const data={observations:el('observations').value,decision:el('decision').value,reason:el('reason').value,confidence:+el('confidence').value};
  const button=document.querySelector('[data-action="save"]');
