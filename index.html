@@ -238,7 +238,7 @@ if(a==='dashboard'){
    host?.scrollIntoView({behavior:'smooth',block:'start'});
   }
   return;
- }if(a.startsWith('doc:'))return loadDoc(a.slice(4));if(a==='ask'){await request('/api/team/ask',{question:el('question').value});formDirty=false;pendingUpdate=false;return refresh()}if(a==='save'){
+ }if(a.startsWith('doc:'))return loadDoc(a.slice(4));if(a==='ask'){const field=el('question');const question=(field?.value||'').trim();if(!question){alert('Vul eerst een informatievraag in.');return}const count=(state.questions||[]).filter(q=>Number(q.round)===Number(state.round)).length;if(count>=2){alert('Jullie hebben in deze ronde al twee vragen gesteld.');return}const button=document.querySelector('[data-action="ask"]');if(button)button.disabled=true;try{await request('/api/team/ask',{question});formDirty=false;pendingUpdate=false;await refresh(true)}catch(error){alert('De vraag is niet bevestigd: '+error.message+' Controleer of de vraag is opgeslagen voordat je opnieuw verzendt.')}finally{if(button&&button.isConnected)button.disabled=false}return}if(a==='save'){
  const round=state.round;
  const data={observations:el('observations').value,decision:el('decision').value,reason:el('reason').value,confidence:+el('confidence').value};
  const button=document.querySelector('[data-action="save"]');
